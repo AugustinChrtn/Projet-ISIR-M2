@@ -1,86 +1,80 @@
 import numpy as np
-
+from collections import defaultdict
 UP,DOWN,LEFT,RIGHT,STAY=0,1,2,3,4
+
 def create_matrix(width,height,liste):
     return [[liste for i in range(width)] for j in range(height)]
+
+def convert_default_dict(dic):
+    if isinstance(dic,defaultdict):
+        return dict((key,convert_default_dict(value)) for key,value in dic.items())
+    else : return dic
+    
+"""
+RMAX’s sketch
+Initialize all couter n(s, a) = 0, n(s, a, s′) = 0.
+Initialize ˆT (s′|s, a) = Is=s′ , ˆR(s, a) = Rmax
+while (1) do
+Compute policy πt using MDP model of ( ˆT , ˆR).
+Choose a = πt(s), observe s′, r.
+n(s, a) = n(s, a) + 1
+r(s, a) = r(s, a) + r
+n(s, a, s′) = n(s, a, s′) + 1
+if n(s, a) = m then
+Update ˆT (·|s, a) = n(s, a, ·)/n(s, a), and ˆR(s, a) = r(s, a)/n(s, a)."""
+
 
 class Rmax_Agent:
 
     def __init__(self,environment, gamma, max_visits_per_state, epsilon = 0.2):
+        
+        self.Rmax=200
+        
+        self.environment=environment
         self.gamma = gamma
         self.epsilon = epsilon
-        self.max_visits_per_state = max_visits_per_state
-        self.Q =np.array(create_matrix(environment.width, environment.height,[0,0,0,0,0])) 
-        self.R = np.zeros((environment.height, environment.width))
-        self.nSA = np.zeros((environment.height, environment.width))
-        self.nSAS = np.zeros((environment.height, environment.width,environment.height))
-        self.val1 = []
-        self.val2 = []  #This is for keeping track of rewards over time and for plotting purposes  
-        print(int( np.ceil(np.log(1 / (self.epsilon * (1-self.gamma))) / (1-self.gamma))))
+        self.max_visits_per_state = max_visits_per_state    
+        self.counter=np.array(create_matrix(environment.width, environment.height,[0,0,0,0,0])) 
+        
+        self.R = defaultdict(lambda: defaultdict(lambda: 0.0))
+        self.tSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
+        
+        self.nSA = defaultdict(lambda: defaultdict(lambda: 0.0))
+        self.nSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
+        self.Rsum = defaultdict(lambda: defaultdict(lambda: 0.0))
+        
+                    
+    def learn(self,old_state,reward,new_state,action):
+                    
+                    if self.nSA[old_state][action] < self.max_visits_per_state :
 
-    def estimate_transition_probablities(self):
+                        self.nSA[old_state][action] +=1
+                        self.Rsum[old_state][action] += reward
+                        self.nSAS[old_state][action][new_state] += 1
 
-        for episode in range(self.max_episodes):
+                    else :
 
-            obs = env.reset()
-            if(episode % 20 == 0):
-                self.val1.append(self.mean_rewards_per_500())
-                self.val2.append(episode)            
-            
-
-            for step in range(self.max_steps):
-
-                best_action = self.choose_action(obs)
-                new_obs, reward, done, _ = env.step(best_action)
-                #print(obs)
-                if self.nSA[obs][best_action] < self.max_visits_per_state :
-
-                    self.nSA[obs][best_action] +=1
-                    self.R[obs][best_action] += reward
-                    self.nSAS[obs][best_action][new_obs] += 1
-
-                    if self.nSA[obs][best_action] == self.max_visits_per_state:
-
-                        for i in range(int( np.ceil(np.log(1 / (self.epsilon * (1-self.gamma))) / (1-self.gamma)) )):
-
-                            for state in range(env.nS):
-                                
-                                for action in range(env.nA):
-
-                                    if self.nSA[state][action] >= self.max_visits_per_state:
-                                        
-                                        #In the cited paper it is given that reward[s,a]= summation of rewards / nSA[s,a]
-                                        #We have already calculated the summation of rewards in line 28
-                                        q = (self.R[state][action]/self.nSA[state][action])
-
-                                        
-                                        for next_state in range(env.nS):
-                                            
-                                            #In the cited paper it is given that transition[s,a] = nSAS'[s,a,s']/nSA[s,a]
-
-                                            transition = self.nSAS[state][action][next_state]/self.nSA[state][action]
-                                            q += (transition * np.max(self.Q[next_state,:]))
-
-                                        self.Q[state][action] = q 
-                                        #print(q + self.gamma*(self.R[state][action]/self.nSA[state][action]))
-                                        #In the cited paper it is given that reward[s,a]= summation of rewards / nSA[s,a]
-                                        #We have already calculated the summation of rewards in line 28
+                        self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action]                         
+                        for next_state in self.nSAS.keys():
+                            self.tSAS[old_state][action][next_state] = self.nSAS[old_state][action][next_state]/self.nSA[old_state][action]
                 
-               
-                if done:
-                    if not(reward==1):
-                        self.R[obs][best_action]=-10
+                    
+                    
+    """Compute policy πt using MDP model of ( ˆT , ˆR).
+        Choose a = πt(s), observe s′, r."""
 
-                    break
-
-                obs = new_obs
-
-
-
-
-    def choose_action(self,observation):
-        if np.random.random() > (1-self.epsilon):
-            action = np.random.choice([UP,DOWN,LEFT,RIGHT,STAY])
+    def choose_action(self):
+        state=self.environment.current_location
+        if state not in self.R.keys():
+            for action in self.environment.actions : 
+                self.R[state][action]=self.Rmax
+                self.nSA[state][action] =0
+                self.Rsum[state][action]=0
+                self.tSAS[state][action][state]=1
+        if np.random.random() > (1-self.epsilon) :
+            action = np.random.choice(self.environment.actions)
         else:
-            action = np.argmax(self.Q[observation])
+                expected_rewards = [np.sum(R[environment.current_location[0]][environment.current_location[1]][action])]
+                action=np.random.choice(np.flatnonzero(q_values == q_values.max()))
+        self.counter[self.environment.current_location][action]+=1
         return action
