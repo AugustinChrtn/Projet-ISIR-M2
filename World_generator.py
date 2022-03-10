@@ -100,10 +100,11 @@ pygame.quit()"""
 def generer_des_mondes(nombre=20):
     for i in range(nombre):
         monde=generer_un_monde()
-        np.save('Mondes/World_'+str(i+1)+'_'+str(int(time.time()))+'.npy',monde)
+        np.save('Mondes/World_'+str(i+1)+str(int(time.time()))+'.npy',monde)
         gridworld=Monde(monde)
         pygame.display.flip()
-        pygame.image.save(gridworld.screen,"Mondes/World"+str(i+1)+'_'+str(int(time.time()))+".png")
+        pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+str(int(time.time()))+".png")
+        pygame.quit()
 
 def incertitude_transition(world):
    walls=[]
@@ -169,7 +170,7 @@ def incertitude_transition(world):
                                probas[5]+=probas[4]
                                probas[4]=0
                    if cases[2] in walls :
-                           if cases[1] in walls :
+                           if cases[0] in walls :
                                probas[5]+=probas[1]
                                probas[1]=0
                            if cases[4] in walls : 
@@ -186,7 +187,7 @@ def generer_des_mondes_incertains(nombre=20):
     for i in range(1,21):
         world=np.load('Mondes/World_' + str(i) +'.npy')
         transitions=incertitude_transition(world)
-        np.save('Mondes/Transitions_'+str(i)+str(int(time.time()))+'.npy',transitions)
+        np.save('Mondes/Transitions_'+str(i)+'.npy',transitions)
         
 def generer_distance_monde(nombre=20):
     for i in range(20):
@@ -198,7 +199,8 @@ def generer_distance_monde(nombre=20):
         monde_distance=distance_etat_initial(world)
         gridworld=Monde(monde_distance)
         pygame.display.flip()
-        pygame.image.save(gridworld.screen,"Mondes/Distance_"+str(i+1)+str(int(time.time()))+".png")
+        pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+"_distance"+str(int(time.time()))+".png")
+        pygame.quit()
 
 def exemple_transition_incertaine(world_number,action,row,col):
     world=np.load('Mondes/World_' + str(world_number) +'.npy')

@@ -5,6 +5,8 @@ import seaborn as sns
 import pandas as pd
 import pickle
 import time
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 from Gridworld import State
 from Complexworld import ComplexState
@@ -14,11 +16,11 @@ from Uncertain_world import Uncertain_State
 from Q_learning import Q_Agent
 from Kalman import Kalman_agent
 from Kalman_sum import Kalman_agent_sum
+from Rmax import Rmax_Agent
+
 
 from Representation import Graphique
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 
 
 #MAIN
@@ -56,11 +58,13 @@ def play(environment, agent, trials=200, max_steps_per_episode=500, screen=0,pho
     if type(agent).__name__=='Q_Agent': return reward_per_episode, agent.counter, agent.q_table
     if type(agent).__name__=='Kalman_agent': return reward_per_episode, agent.counter, agent.KF_table_mean, agent.KF_table_variance
     if type(agent).__name__=='Kalman_agent_sum': return reward_per_episode,agent.counter,agent.KF_table_mean,agent.KF_table_variance
+    if type(agent).__name__=='Rmax_Agent': return reward_per_episode,agent.counter,agent.qSA,agent.tSAS,agent.R
 
 
 ###### OPTIMISATION ######
 
 def find_best_duo_Q_learning(number_environment,alpha=0.6,uncertain=False):
+    
     beta_range=[np.around(2*j*1e-4,decimals=5) for j in range(10,101,10)]
     gamma_range=[(0.95+i/100) for i in range(5)]
     
@@ -73,10 +77,38 @@ def find_best_duo_Q_learning(number_environment,alpha=0.6,uncertain=False):
         for gamma in gamma_range:
                 if uncertain : environment=Uncertain_State(world,transitions)
                 else : environment=Deterministic_State(world)
-                QA= Q_Agent(environment,alpha,beta,gamma)
+                QA=Q_Agent(environment,alpha,beta,gamma)
                 reward_per_episode, counter_QA, Q_values= play(environment,QA,trials=200)
                 results.append([beta,gamma,np.mean(reward_per_episode)])
     return np.array(results)
+
+
+
+def find_best_duo_Kalman_sum(number_environment,uncertain=False):
+    
+    variance_tr_range=[np.around(j*10,decimals=4) for j in range(1,21,2)]
+    curiosity_factor_range=[np.around(j*1e-1,decimals=5) for j in range(1,21,2)] 
+    
+    world=np.load('Mondes/World_'+str(number_environment)+'.npy')
+    transitions=np.load('Mondes/Transitions_'+str(number_environment)+'.npy',allow_pickle=True)
+    
+    results=[]
+    for index_variance_tr,variance_tr in enumerate(variance_tr_range):
+        print(index_variance_tr) 
+        for curiosity_factor in curiosity_factor_range:
+                if uncertain : environment=Uncertain_State(world,transitions)
+                else : environment = Deterministic_State(world)
+                KAS=Kalman_agent_sum(environment,gamma=0.95,variance_ob=1,variance_tr=variance_tr,curiosity_factor=curiosity_factor)
+                reward_per_episode,counter_KAS, table_mean_KAS,table_variance_KAS = play(environment,KAS,trials=200)
+                results.append([variance_tr,curiosity_factor,np.mean(reward_per_episode)])
+    return np.array(results)
+
+
+
+
+
+
+
 
 def find_best_trio_Q_learning(number_environment,uncertain=False):
     alpha_range=[np.around(j*1e-2,decimals=4) for j in range(40,81,4)]
@@ -98,49 +130,36 @@ def find_best_trio_Q_learning(number_environment,uncertain=False):
                 results.append([alpha,beta,gamma,np.mean(reward_per_episode)])
     return np.array(results)
            
-        
-        
-def find_best_duo_Kalman_sum(number_environment,uncertain=False):
-    alpha_range=[np.around(j*1e-2,decimals=4) for j in range(40,81,4)]
-    beta_range=[np.around(2*j*1e-4,decimals=5) for j in range(10,101,10)]
-    gamma_range=[(0.9+i/100) for i in range(6)]    
+
+def find_best_trio_Kalman_sum(number_environment,uncertain=False):
+    variance_tr_range=[np.around(j*10,decimals=4) for j in range(1,21,2)]
+    curiosity_factor_range=[np.around(j*1e-1,decimals=5) for j in range(1,21,2)] 
+    gamma_range=[np.around(0.9+i/50,decimals=4) for i in range(5)]   
     
     world=np.load('Mondes/World_'+str(number_environment)+'.npy')
-    transitions=np.load('Mondes/Transitions_'+str(number_environment)+'.npy',allow_pickle=True)
+    transitions=np.load('Mondes/Transitions_'+str(number_environment)+'.npy',allow_pickle=True)  
     
     results=[]
-    for index_alpha,alpha in enumerate(alpha_range):
-        print(index_alpha) 
-        for beta in beta_range:
-            for gamma in gamma_range:
+    
+    for index_variance_tr,variance_tr in enumerate(variance_tr_range):
+        print(index_variance_tr) 
+        for curiosity_factor in curiosity_factor_range:
+            for gamma in gamma_range : 
                 if uncertain : environment=Uncertain_State(world,transitions)
                 else : environment = Deterministic_State(world)
-                QA= Q_Agent(environment,alpha,beta,gamma)
-                reward_per_episode, counter_QA, Q_values= play(environment,QA,trials=200)
-                results.append([alpha,beta,gamma,np.mean(reward_per_episode)])
-    return np.array(results)
-
-def find_best_trio_Kalman_sum(number_environment):
-    alpha_range=[np.around(j*1e-2,decimals=4) for j in range(50,101,5)]
-    beta_range=[np.around(2*j*1e-4,decimals=5) for j in range(10,501,25)]
-    gamma_range=[np.around(0.9+i/50,decimals=4) for i in range(5)]   
-    results=[]
-    world=np.load('Mondes/World_'+str(number_environment)+'.npy')
-    transitions=np.load('Mondes/Transitions_'+str(number_environment)+'.npy',allow_pickle=True)    
-    for index_alpha,alpha in enumerate(alpha_range):
-        print(index_alpha) 
-        for beta in beta_range:
-            for gamma in gamma_range:
-                environment=Uncertain_State(world,transitions)
-                QA= Q_Agent(environment,alpha,beta,gamma)
-                reward_per_episode, counter_QA, Q_values= play(environment,QA,trials=200)
-                results.append([alpha,beta,gamma,np.mean(reward_per_episode)])
+                KAS=Kalman_agent_sum(environment,gamma=gamma,variance_ob=1,variance_tr=variance_tr,curiosity_factor=curiosity_factor)
+                reward_per_episode,counter_KAS, table_mean_KAS,table_variance_KAS = play(environment,KAS,trials=200)
+                results.append([variance_tr,curiosity_factor,gamma,np.mean(reward_per_episode)])
     return np.array(results)
 
 
 ######## VISUALISATION ########
 
-
+def convert_from_default(dic):
+    from collections import defaultdict
+    if isinstance(dic,defaultdict):
+        return dict((key,convert_from_default(value)) for key,value in dic.items())
+    else : return dic
 
 def normalized_table(table,environment):
      precision=np.array([[0 for i in range(environment.height)] for j in range(environment.width)])
@@ -167,7 +186,7 @@ def picture_world(environment,table):
 
 
 def plot3D(table_3D,x_name='beta',y_name='gamma'):
-    dataframe=pd.DataFrame({x_name:table_3D[:,0],y_name:table_3D[:,1],'values':table_3D[:,2]})
+    dataframe=pd.DataFrame({x_name:table_3D[:,0], y_name:table_3D[:,1], 'values':table_3D[:,2]})
     data_pivoted = dataframe.pivot(x_name, y_name, "values")
     sns.heatmap(data_pivoted,cmap='Blues')
     
