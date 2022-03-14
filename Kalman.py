@@ -1,38 +1,44 @@
 import numpy as np
+from collections import defaultdict
 
-def create_matrix(width,height,liste):
-    return [[liste for i in range(width)] for j in range(height)]
-UP,DOWN,LEFT,RIGHT,STAY=0,1,2,3,4
 
 class Kalman_agent(): 
     
-    def __init__(self, environment, gamma=1, variance_ob=1,variance_tr=30000):
+    def __init__(self, environment, gamma=1, variance_ob=1,variance_tr=40):
         self.environment = environment
-        self.KF_table_mean =np.array(create_matrix(environment.width, environment.height,[0,0,0,0,0])) 
-        self.KF_table_variance = np.array(create_matrix(environment.width, environment.height,[1,1,1,1,1])) 
-        self.counter=np.array(create_matrix(environment.width, environment.height,[0,0,0,0,0])) 
+        self.K_mean = defaultdict(lambda: defaultdict(lambda: 0.0))
+        self.K_var = defaultdict(lambda: defaultdict(lambda: 0.0))
+        self.counter= defaultdict(lambda: defaultdict(lambda: 0.0))
         self.gamma = gamma
         self.variance_ob=variance_ob
         self.variance_tr=variance_tr
-    
+
     def choose_action(self):
-        get_mean=self.KF_table_mean[self.environment.current_location]
-        get_variance=self.KF_table_variance[self.environment.current_location]
-        probas=np.array([0,0,0,0,0])
-        for move in [UP,DOWN,LEFT,RIGHT]:
+        state=self.environment.current_location
+        actions=self.environment.actions
+        self.uncountered_state(state)
+        get_mean=self.K_mean[state]
+        get_variance=self.K_var[state]
+        probas=np.zeros(len(actions))
+        for move in actions:
             probas[move]=np.random.normal(get_mean[move],np.sqrt(get_variance[move]))
         action = np.argmax(probas)
-        self.counter[self.environment.current_location][action]+=1
+        self.counter[state][action]+=1
         return action
     
-
     def learn(self, old_state, reward, new_state, action):
-        means_new_state = self.KF_table_mean[new_state]
-        max_mean_in_new_state = np.max(means_new_state)
-        current_mean = self.KF_table_mean[old_state][action]
-        current_variance = self.KF_table_variance[old_state][action]
-        self.KF_table_mean[old_state][action] = ((current_variance+self.variance_tr)*(reward +self.gamma * max_mean_in_new_state)+(self.variance_ob*current_mean))/ (current_variance+self.variance_tr+self.variance_ob)
-        self.KF_table_variance[old_state][action]=((current_variance+self.variance_tr)*self.variance_ob)/(current_variance+self.variance_ob+self.variance_tr)
-        for move in [UP,DOWN,LEFT,RIGHT,STAY]:
+        self.uncountered_state(new_state)
+        max_mean_in_new_state = max(self.K_mean[new_state].values())
+        current_mean = self.K_mean[old_state][action]
+        current_variance = self.K_var[old_state][action]
+        self.K_mean[old_state][action] = ((current_variance+self.variance_tr)*(reward +self.gamma * max_mean_in_new_state)+(self.variance_ob*current_mean))/ (current_variance+self.variance_tr+self.variance_ob)
+        self.K_var[old_state][action]=((current_variance+self.variance_tr)*self.variance_ob)/(current_variance+self.variance_ob+self.variance_tr)
+        for move in self.environment.actions:
             if move != action : 
-                self.KF_table_variance[old_state][move]+=self.variance_tr
+                self.K_var[old_state][move]+=self.variance_tr
+    
+    def uncountered_state(self,state):
+        if state not in self.K_mean.keys():
+            for move in self.environment.actions:
+                self.K_mean[state][move]=0
+                self.K_var[state][move]=1

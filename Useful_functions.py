@@ -25,24 +25,25 @@ from Representation import Graphique
 
 #MAIN
 
-def play(environment, agent, trials=200, max_steps_per_episode=500, screen=0,photos=[199]):
+def play(environment, agent, trials=200, max_step=500, screen=0,photos=[50,100,150,199]):
     reward_per_episode = []
     for trial in range(trials):
         if screen :
             if trial in photos:
                 if type(agent).__name__=='Q_Agent': 
-                    value=copy.deepcopy(agent.q_table)
+                    value=copy.deepcopy(agent.Q)
                 if type(agent).__name__ in ['Kalman_agent','Kalman_agent_sum']: 
-                    value=copy.deepcopy(agent.KF_table_mean)
+                    value=copy.deepcopy(agent.K_mean)
                     if type(agent).__name__ =='Kalman_agent_sum':
-                        curiosity=copy.deepcopy(agent.KF_table_variance)
+                        curiosity=copy.deepcopy(agent.K_var)
                         img2=picture_world(environment,curiosity)
                         pygame.image.save(img2.screen,"Images/curiosity_"+type(agent).__name__+str(trial)+".png")
-                img=picture_world(environment,value)
-                pygame.image.save(img.screen,"Images/"+type(agent).__name__+"_"+str(trial)+".png")
+                if type(agent).__name__!='Rmax_Agent':
+                    img=picture_world(environment,value)
+                    pygame.image.save(img.screen,"Images/"+type(agent).__name__+"_"+str(trial)+".png")
         
         cumulative_reward, step, game_over= 0,0,False
-        while step < max_steps_per_episode and game_over != True:
+        while step < max_step and game_over != True:
             old_state = environment.current_location
             action = agent.choose_action() 
             reward , terminal = environment.make_step(action)
@@ -53,13 +54,13 @@ def play(environment, agent, trials=200, max_steps_per_episode=500, screen=0,pho
             if terminal == True :
                 environment.current_location=environment.first_location
                 game_over = True 
-        if step == max_steps_per_episode : environment.current_location=environment.first_location                    
+        if step == max_step : environment.current_location=environment.first_location                    
         reward_per_episode.append(cumulative_reward)
-    if type(agent).__name__=='Q_Agent': return reward_per_episode, agent.counter, agent.q_table
-    if type(agent).__name__=='Kalman_agent': return reward_per_episode, agent.counter, agent.KF_table_mean, agent.KF_table_variance
-    if type(agent).__name__=='Kalman_agent_sum': return reward_per_episode,agent.counter,agent.KF_table_mean,agent.KF_table_variance
+    if type(agent).__name__=='Q_Agent': return reward_per_episode, agent.counter, agent.Q
+    if type(agent).__name__=='Kalman_agent': return reward_per_episode, agent.counter, agent.K_mean, agent.K_var
+    if type(agent).__name__=='Kalman_agent_sum': return reward_per_episode,agent.counter,agent.K_mean,agent.K_var
     if type(agent).__name__=='Rmax_Agent': return reward_per_episode,agent.counter,agent.qSA,agent.tSAS,agent.R
-
+    if type(agent).__name__=='BEB_Agent': return reward_per_episode,agent.counter,agent.qSA,agent.tSAS,agent.R
 
 ###### OPTIMISATION ######
 
@@ -98,14 +99,10 @@ def find_best_duo_Kalman_sum(number_environment,uncertain=False):
         for curiosity_factor in curiosity_factor_range:
                 if uncertain : environment=Uncertain_State(world,transitions)
                 else : environment = Deterministic_State(world)
-                KAS=Kalman_agent_sum(environment,gamma=0.95,variance_ob=1,variance_tr=variance_tr,curiosity_factor=curiosity_factor)
+                KAS=Kalman_agent_sum(environment,gamma=0.99,variance_ob=1,variance_tr=variance_tr,curiosity_factor=curiosity_factor)
                 reward_per_episode,counter_KAS, table_mean_KAS,table_variance_KAS = play(environment,KAS,trials=200)
                 results.append([variance_tr,curiosity_factor,np.mean(reward_per_episode)])
     return np.array(results)
-
-
-
-
 
 
 

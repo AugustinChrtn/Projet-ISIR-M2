@@ -14,7 +14,7 @@ def choice_dictionary(dictionary):
 
 
 class Uncertain_State:
-    def __init__(self,world,uncertainty):
+    def __init__(self,world,transitions):
         initial_state=[]
         final_state=[]
         wall_state=[]
@@ -36,10 +36,10 @@ class Uncertain_State:
         self.walls=wall_state
 
         self.actions = [UP, DOWN, LEFT, RIGHT,STAY]
-        self.UP=uncertainty[UP]
-        self.DOWN=uncertainty[DOWN]
-        self.LEFT=uncertainty[LEFT]
-        self.RIGHT=uncertainty[RIGHT]
+        self.UP=transitions[UP]
+        self.DOWN=transitions[DOWN]
+        self.LEFT=transitions[LEFT]
+        self.RIGHT=transitions[RIGHT]
         self.STAY=[list({} for i in range(self.width))for i in range(self.height)]
         
         for row in range(self.height):

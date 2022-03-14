@@ -202,7 +202,7 @@ def generer_distance_monde(nombre=20):
         pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+"_distance"+str(int(time.time()))+".png")
         pygame.quit()
 
-def exemple_transition_incertaine(world_number,action,row,col):
+def montrer_transition(world_number,action,row,col):
     world=np.load('Mondes/World_' + str(world_number) +'.npy')
     all_transitions=np.load('Mondes/Transitions_'+str(world_number)+'.npy',allow_pickle=True)
     transition=all_transitions[action][row][col]
