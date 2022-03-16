@@ -218,7 +218,7 @@ def plot4D(table_4D,x_name='alpha',y_name='beta',z_name='gamma',save=False): #Ch
     #save_interactive(fig2,str(time.time()))
     fig2.show()
     print(table_4D[table_4D[:,3]>50])
-    
+
     
 def save_interactive(fig,name):
     pickle.dump(fig, open('Interactive/'+name+'.fig.pickle', 'wb'))
