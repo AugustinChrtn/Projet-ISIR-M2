@@ -14,9 +14,10 @@ class Q_Agent():
         self.gamma = gamma
         self.exploration=exploration
         self.beta=beta
+        self.step_counter=0
         
     def choose_action(self):       
-        
+        self.step_counter+=1
         state=self.environment.current_location
         actions=self.environment.actions
         self.uncountered_state(state)     

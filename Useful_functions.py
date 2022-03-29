@@ -25,42 +25,79 @@ from Representation import Graphique
 
 #MAIN
 
-def play(environment, agent, trials=200, max_step=500, screen=0,photos=[50,100,150,199]):
+def play(environment, agent, trials=200, max_step=500, screen=0,photos=[10,20,50]):
     reward_per_episode = []
+    step_number=[]
     for trial in range(trials):
-        if screen :
-            if trial in photos:
-                if type(agent).__name__=='Q_Agent': 
-                    value=copy.deepcopy(agent.Q)
-                if type(agent).__name__ in ['Kalman_agent','Kalman_agent_sum']: 
-                    value=copy.deepcopy(agent.K_mean)
-                    if type(agent).__name__ =='Kalman_agent_sum':
-                        curiosity=copy.deepcopy(agent.K_var)
-                        img2=picture_world(environment,curiosity)
-                        pygame.image.save(img2.screen,"Images/curiosity_"+type(agent).__name__+str(trial)+".png")
-                if type(agent).__name__!='Rmax_Agent':
-                    img=picture_world(environment,value)
-                    pygame.image.save(img.screen,"Images/"+type(agent).__name__+"_"+str(trial)+".png")
+        
+        if screen : take_picture(agent,trial,environment,photos) #Visualisation
         
         cumulative_reward, step, game_over= 0,0,False
-        while step < max_step and game_over != True:
+        while not game_over :
             old_state = environment.current_location
             action = agent.choose_action() 
-            reward , terminal = environment.make_step(action)
+            reward , terminal = environment.make_step(action) #reward and if state is terminal
             new_state = environment.current_location            
             agent.learn(old_state, reward, new_state, action)                
             cumulative_reward += reward
             step += 1            
-            if terminal == True :
+            if terminal == True or step==max_step:
+                game_over = True
                 environment.current_location=environment.first_location
-                game_over = True 
-        if step == max_step : environment.current_location=environment.first_location                    
+                step_number.append(agent.step_counter)
         reward_per_episode.append(cumulative_reward)
-    if type(agent).__name__=='Q_Agent': return reward_per_episode, agent.counter, agent.Q
-    if type(agent).__name__=='Kalman_agent': return reward_per_episode, agent.counter, agent.K_mean, agent.K_var
-    if type(agent).__name__=='Kalman_agent_sum': return reward_per_episode,agent.counter,agent.K_mean,agent.K_var
-    if type(agent).__name__=='Rmax_Agent': return reward_per_episode,agent.counter,agent.qSA,agent.tSAS,agent.R
-    if type(agent).__name__=='BEB_Agent': return reward_per_episode,agent.counter,agent.qSA,agent.tSAS,agent.R
+    if type(agent).__name__=='Q_Agent': return reward_per_episode, step_number,agent.counter, agent.Q
+    if type(agent).__name__=='Kalman_agent': return reward_per_episode, step_number, agent.counter, agent.Q, agent.K_var
+    if type(agent).__name__=='Kalman_agent_sum': return reward_per_episode, step_number, agent.counter,agent.Q,agent.K_var
+    if type(agent).__name__=='Rmax_Agent': return reward_per_episode, step_number,agent.counter, agent.Q, agent.tSAS, agent.R
+    if type(agent).__name__=='BEB_Agent': return reward_per_episode, step_number, agent.counter, agent.Q, agent.tSAS, agent.R
+    if type(agent).__name__=='KalmanMB_Agent': return reward_per_episode, step_number, agent.counter, agent.Q, agent.tSAS, agent.R
+
+
+
+### PICTURES ###
+
+def take_picture(agent,trial,environment,photos):
+            if trial in photos:
+                    value=copy.deepcopy(agent.Q)
+                    img=picture_world(environment,value)
+                    pygame.image.save(img.screen,"Images/"+type(agent).__name__+"_"+str(trial)+".png")
+                    if type(agent).__name__ =='Kalman_agent_sum':
+                        curiosity=copy.deepcopy(agent.K_var)
+                        img2=picture_world(environment,curiosity)
+                        pygame.image.save(img2.screen,"Images/"+type(agent).__name__+"_bonus"+str(trial)+".png")
+                    if type(agent).__name__=='Rmax_Agent':
+                        reward_bonus=copy.deepcopy(agent.R)
+                        img2=picture_world(environment,reward_bonus)
+                        pygame.image.save(img2.screen,"Images/"+type(agent).__name__+"_bonus"+str(trial)+".png")
+                    if type(agent).__name__=='BEB_Agent':
+                        beta_bonus=copy.deepcopy(agent.bonus)
+                        img2=picture_world(environment,beta_bonus)
+                        pygame.image.save(img2.screen,"Images/"+type(agent).__name__+"_bonus"+str(trial)+".png")
+
+
+def normalized_table(table,environment):
+    max_every_state=np.zeros((environment.height,environment.width))
+    for state in table.keys():
+        q_values = table[state]
+        max_value_state=max(q_values.values())
+        max_every_state[state]=max_value_state
+    mini,maxi=np.min(max_every_state),np.max(max_every_state)
+    if mini < 0 : max_every_state-=mini
+    if maxi !=0 : max_every_state/=maxi     
+    return max_every_state
+ 
+def picture_world(environment,table):       
+    precision=normalized_table(table,environment)
+    init_loc=[environment.first_location[0],environment.first_location[1]]
+    screen_size = environment.height*50
+    cell_width = 44.8
+    cell_height = 44.8
+    cell_margin = 5
+    gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.final_states,init_loc,precision)
+    return gridworld
+
+
 
 ###### OPTIMISATION ######
 
@@ -158,28 +195,6 @@ def convert_from_default(dic):
         return dict((key,convert_from_default(value)) for key,value in dic.items())
     else : return dic
 
-def normalized_table(table,environment):
-     precision=np.array([[0 for i in range(environment.height)] for j in range(environment.width)])
-     for i in range(environment.height):
-         for j in range(environment.width):
-             max_table=max(table[i,j])
-             precision[i][j]=max_table
-     mini=np.min(precision)
-     if mini < 0 : precision-=mini
-     normalization_factor=np.max(precision)
-     if normalization_factor !=0 : precision=precision/normalization_factor     
-     return precision
-
- 
-def picture_world(environment,table):       
-    precision=normalized_table(table,environment)
-    init_loc=[environment.first_location[0],environment.first_location[1]]
-    screen_size = environment.height*50
-    cell_width = 44.8
-    cell_height = 44.8
-    cell_margin = 5
-    gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.final_states,init_loc,precision)
-    return gridworld
 
 
 def plot3D(table_3D,x_name='beta',y_name='gamma'):
@@ -226,3 +241,25 @@ def save_interactive(fig,name):
 def plot_interactive(name_fig):
     figx=pickle.load(open('Interactive/'+name_fig,'rb'))
     figx.show()
+    
+#Stats 
+
+
+def plateau(array,longueur=20,variation=0.2,absolu=3,artefact=3):
+    for i in range(len(array)-longueur):
+        table=array[i:i+longueur]
+        mean=np.mean(table)
+        if mean >0:
+            mauvais=0
+            valid=True
+            for element in table : 
+                if element < (1-variation)*mean-absolu>element or element > (1+variation)*mean+absolu:
+                    mauvais+=1
+                    if mauvais > artefact:
+                        valid=False
+            if valid : 
+                return [len(array)-len(array[i+1:]),np.mean(array[i+1:]),np.var(array[i+1:])]            
+    return [len(array)-1,np.mean(array),np.var(array)]
+    
+    
+    
