@@ -25,7 +25,7 @@ from Representation import Graphique
 
 #MAIN
 
-def play(environment, agent, trials=200, max_step=500, screen=0,photos=[10,20,50]):
+def play(environment, agent, trials=200, max_step=500, screen=1,photos=[10,20,50,100,199,300,499]):
     reward_per_episode = []
     step_number=[]
     for trial in range(trials):
@@ -46,12 +46,7 @@ def play(environment, agent, trials=200, max_step=500, screen=0,photos=[10,20,50
                 environment.current_location=environment.first_location
                 step_number.append(agent.step_counter)
         reward_per_episode.append(cumulative_reward)
-    if type(agent).__name__=='Q_Agent': return reward_per_episode, step_number,agent.counter, agent.Q
-    if type(agent).__name__=='Kalman_agent': return reward_per_episode, step_number, agent.counter, agent.Q, agent.K_var
-    if type(agent).__name__=='Kalman_agent_sum': return reward_per_episode, step_number, agent.counter,agent.Q,agent.K_var
-    if type(agent).__name__=='Rmax_Agent': return reward_per_episode, step_number,agent.counter, agent.Q, agent.tSAS, agent.R
-    if type(agent).__name__=='BEB_Agent': return reward_per_episode, step_number, agent.counter, agent.Q, agent.tSAS, agent.R
-    if type(agent).__name__=='KalmanMB_Agent': return reward_per_episode, step_number, agent.counter, agent.Q, agent.tSAS, agent.R
+    return reward_per_episode,step_number
 
 
 
@@ -245,7 +240,7 @@ def plot_interactive(name_fig):
 #Stats 
 
 
-def plateau(array,longueur=20,variation=0.2,absolu=3,artefact=3):
+def convergence(array,longueur=20,variation=0.2,absolu=3,artefact=3):
     for i in range(len(array)-longueur):
         table=array[i:i+longueur]
         mean=np.mean(table)

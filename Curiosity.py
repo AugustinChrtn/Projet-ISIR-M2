@@ -20,28 +20,27 @@ from Rmax import Rmax_Agent
 from BEB import BEB_Agent
 from KalmanMB import KalmanMB_Agent
 
-for number_world in range(1,2):
+for number_world in range(2,3):
 
     world=np.load('Mondes/World_'+str(number_world)+'.npy')
     transitions=np.load('Mondes/Transitions_'+str(number_world)+'.npy',allow_pickle=True)
     
     environment=Uncertain_State(world, transitions)
-    trials, max_step=200,500
+    trials, max_step=500,500
     nb_agents=5
     nb_iters=1
     
     rewards=[[]for i in range(nb_agents)]
     step_plateau=[[] for i in range(nb_agents)]
-    
     for i in range(nb_iters):
         
             print(i)
             
             QA=Q_Agent(environment,alpha=0.5,beta=0.05,gamma=0.95,exploration='softmax')
             KAS=Kalman_agent_sum(environment,gamma=0.98,variance_ob=1,variance_tr=50,curiosity_factor=1)
-            RA=Rmax_Agent(environment,gamma=0.9, max_visits_per_state=8, epsilon =0.1,Rmax=200)
+            RA=Rmax_Agent(environment,gamma=0.9, max_visits_per_state=10, epsilon =0.1,Rmax=200)
             BEB=BEB_Agent(environment,gamma=0.9,beta=500)
-            KMB=KalmanMB_Agent(environment,gamma=0.95, epsilon = 0.1,H_update=3,entropy_factor=0.2,epis_factor=50,alpha=0.2,gamma_epis=0.5)
+            KMB=KalmanMB_Agent(environment,gamma=0.95,epsilon = 0.1,H_update=3,entropy_factor=0.1,epis_factor=50,alpha=0.2,gamma_epis=0.5,variance_ob=0.02,variance_tr=1)
             
             reward_QA,step_number_QA, counter_QA,value_QA = play(environment, QA,trials=trials,max_step=max_step)
             reward_KAS,step_number_KAS, counter_KAS, table_mean_KAS,table_variance_KAS = play(environment,KAS,trials=trials,max_step=max_step)
@@ -60,7 +59,7 @@ for number_world in range(1,2):
             step_plateau[2].append(step_number_RA)
             step_plateau[3].append(step_number_BEB)           
             step_plateau[4].append(step_number_KMB)
- 
+            
 mean_rewards=[np.mean(reward) for reward in rewards]
 plateaux=[[plateau(rewards[nb_agent][nb_iter]) for nb_iter in range(nb_iters)]for nb_agent in range(nb_agents)]
 avg_plateaux=np.average(plateaux,axis=1)

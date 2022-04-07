@@ -218,3 +218,27 @@ def montrer_transition(world_number,action,row,col):
     pygame.time.delay(5000)
     pygame.quit()
     
+def transition_Lopes():
+    dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
+    uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
+    for action in [UP,DOWN,LEFT,RIGHT,STAY]:
+        for height in range(5):
+            for width in range(5):
+                if (height,width) not in uncertain_states:probas=np.random.dirichlet([0.1]*25)
+                else : probas = np.random.dirichlet([1]*25)
+                probas=probas.reshape(5,5)
+                if action == UP and height-1 >=0: index=(height-1,width)
+                elif action == DOWN and height+1 <5: index = (height+1,width)
+                elif action == LEFT and width-1 >=0: index = (height,width-1)
+                elif action == RIGHT and width+1 <5: index = (height,width+1)
+                else : index=(height,width) 
+                max_index=np.unravel_index(probas.argmax(),probas.shape)
+                probas[max_index],probas[index]=probas[index],probas[max_index]
+                for row in range(5):
+                    for col in range(5):
+                        dict_transitions[action][height][width][(row,col)]=probas[row][col]
+    np.save('Mondes/Transitions_Lopes.npy',dict_transitions)
+                
+                    
+                
+            
