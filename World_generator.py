@@ -9,13 +9,21 @@ from Representation import Transition
 
 UP,DOWN,LEFT,RIGHT,STAY=0,1,2,3,4
 
-def monde_avec_murs(taille=10,pourcent_murs=0.1):
+
+pattern={(i,j):0 for i in range(4,7) for j in range(4,7)}
+for i in [4,6]:
+    for j in [4,6]:
+        pattern[i,j]=-1
+taille=10
+pourcent_murs=0.1
+
+def monde_avec_murs(taille=taille,pourcent_murs=pourcent_murs,pattern=pattern):
     etats=np.zeros((taille,taille))
     #1ere phase
     for i in range(taille):
         for j in range(taille):
             if random.random()<pourcent_murs:
-                etats[i,j]=-1
+                etats[i,j]=-1        
     #2e phase 
     for i in range(taille):
         for j in range(taille):
@@ -34,7 +42,9 @@ def monde_avec_murs(taille=10,pourcent_murs=0.1):
             if j-1<0 or etats[i,j-1]==-1:r+=0.25
             if j+1 > taille-1 or etats[i,j+1]==-1:r+=0.25
             if r==1:etats[i,j]=-1
-
+    #pattern 
+    for case,value in pattern.items() :
+        etats[case]=value
     return etats
 
 def etat_initial(etats):
@@ -63,7 +73,7 @@ def distance_etat_initial(etats):
                         etats[i][j+1] = k + 1
     return etats
 
-def generation_distance(taille=10,pourcent_murs=0.1):
+def generation_distance(taille=taille,pourcent_murs=pourcent_murs):
     monde=monde_avec_murs(taille,pourcent_murs)
     monde_initial=etat_initial(monde)
     monde_distance=distance_etat_initial(monde_initial)
@@ -71,10 +81,11 @@ def generation_distance(taille=10,pourcent_murs=0.1):
     high_rewards=(monde_distance>15).any()
     return monde_distance,high_rewards
 
-def generer_un_monde(taille=10,pourcent_murs=0.1,recompenses=[20,200]):
+def generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=[20,200],pattern=pattern):
     valid=False
     while not valid:
         monde,valid=generation_distance()
+    distance_initial=monde.copy()
     more_than_15=[]
     between_5_and_10=[]
     for row in range(taille):
@@ -90,20 +101,64 @@ def generer_un_monde(taille=10,pourcent_murs=0.1,recompenses=[20,200]):
                 monde[row,col]=0
             monde[high_reward[0],high_reward[1]]=np.max(recompenses)
             monde[low_reward[0],low_reward[1]]=np.min(recompenses)
+    
+    #distance from the max reward
+    
+    monde_highest_reward=monde.copy()
+    for row in range(taille):
+        for col in range(taille):
+            if monde_highest_reward[row,col]!=-1:
+                monde_highest_reward[row,col]=0
+    monde_highest_reward[high_reward[0],high_reward[1]]=1
+    distance_max=distance_etat_initial(monde_highest_reward)
+
+    #Cases on an optimal path
+    optimal_path=np.zeros((taille,taille))
+    for row in range(taille):
+        for col in range(taille):
+            if distance_initial[row,col] >=1  and distance_max[row,col]>=1:
+                optimal_path[row,col]= distance_initial[row,col]+distance_max[row,col]<=distance_initial[high_reward[0],high_reward[1]]+1
+            else : optimal_path[row,col]=-1
+    
+    distance_init_optimal=dict()
+    for row in range(taille):
+        for col in range(taille):
+            if optimal_path[row,col]==1 and (row,col) not in pattern.keys():
+                distance_init_optimal[row,col]=distance_initial[row,col]
+    monde_valide=False
+    
+    for case,value in pattern.items() :
+        if value ==0:
+            if distance_initial[case[0],case[1]] > 6 and distance_max[case[0],case[1]]>6 : #Far from the max reward
+                #Pattern on the optimal way
+                if optimal_path[case] and len([k for k, v in distance_init_optimal.items() if v == distance_initial[case[0],case[1]]])==0: monde_valide=True
+        if (low_reward[0],low_reward[1]) in pattern.keys(): #Low reward not in the pattern
+            monde_valide=False
+    
+
+    monde_2=monde.copy()
+    for case,value in pattern.items():
+        monde_2[case]=-1
+    monde_2[high_reward[0],high_reward[1]]=0
+    monde_2[low_reward[0],low_reward[1]]=0
+    distance_monde_2=distance_etat_initial(monde_2)
+    if distance_monde_2[high_reward[0],high_reward[1]] <= distance_initial[high_reward[0],high_reward[1]]+3 : monde_valide=False
+    if not monde_valide : return generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=[20,200],pattern=pattern)
     return monde
 
 """exemple=generer_un_monde()
 gridworld=Monde(exemple)
 pygame.display.flip()
-pygame.quit()"""            
+pygame.time.delay(5000)
+pygame.quit()   """    
     
 def generer_des_mondes(nombre=20):
     for i in range(nombre):
         monde=generer_un_monde()
-        np.save('Mondes/World_'+str(i+1)+str(int(time.time()))+'.npy',monde)
+        np.save('Mondes/World_'+str(i+1)+'.npy',monde)
         gridworld=Monde(monde)
         pygame.display.flip()
-        pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+str(int(time.time()))+".png")
+        pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+".png")
         pygame.quit()
 
 def incertitude_transition(world):
@@ -111,13 +166,13 @@ def incertitude_transition(world):
    for row in range(len(world)):
         for col in range(len(world[0])):
             if world[row][col]==-1: walls.append((row,col))
-   dict_transitions=[[list({} for i in range(len(world)))for i in range(len(world[0]))] for i in range(4)]
+   dict_transitions=[[list({} for i in range(len(world)))for i in range(len(world[0]))] for i in range(5)]
    for row in range(len(world)):
        for col in range(len(world[0])):
            if world[row][col] !=-1:
                for action in range(4):
                    
-                   uncertainty=random.randint(10,30)*0.01
+                   uncertainty=random.randint(20,50)*0.01
                    bias=random.randint(10,90)*0.01
                    spread_left=random.randint(0,20)*0.01
                    spread_right=random.randint(0,20)*0.01
@@ -180,12 +235,12 @@ def incertitude_transition(world):
                    for i in range(6):
                            if probas[i]!=0:
                                dict_transitions[action][row][col][cases[i]]=probas[i]
-                               
+               dict_transitions[4][row][col][(row,col)]=1
    return dict_transitions
                            
 def generer_des_mondes_incertains(nombre=20):
     for i in range(1,21):
-        world=np.load('Mondes/World_' + str(i) +'.npy')
+        world=np.load('Mondes/World_' + str(i)+'.npy')
         transitions=incertitude_transition(world)
         np.save('Mondes/Transitions_'+str(i)+'.npy',transitions)
         
@@ -199,7 +254,7 @@ def generer_distance_monde(nombre=20):
         monde_distance=distance_etat_initial(world)
         gridworld=Monde(monde_distance)
         pygame.display.flip()
-        pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+"_distance"+str(int(time.time()))+".png")
+        pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+"_distance"+".png")
         pygame.quit()
 
 def montrer_transition(world_number,action,row,col):
@@ -215,30 +270,60 @@ def montrer_transition(world_number,action,row,col):
     transi=Transition((row,col),titre,transition,walls,action)
     pygame.display.flip()
     pygame.image.save(transi.screen,"Mondes/"+str(titre)+'.png')
-    pygame.time.delay(5000)
+    pygame.time.delay(3000)
     pygame.quit()
     
-def transition_Lopes():
-    dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
-    uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
-    for action in [UP,DOWN,LEFT,RIGHT,STAY]:
-        for height in range(5):
-            for width in range(5):
-                if (height,width) not in uncertain_states:probas=np.random.dirichlet([0.1]*25)
-                else : probas = np.random.dirichlet([1]*25)
-                probas=probas.reshape(5,5)
-                if action == UP and height-1 >=0: index=(height-1,width)
-                elif action == DOWN and height+1 <5: index = (height+1,width)
-                elif action == LEFT and width-1 >=0: index = (height,width-1)
-                elif action == RIGHT and width+1 <5: index = (height,width+1)
-                else : index=(height,width) 
-                max_index=np.unravel_index(probas.argmax(),probas.shape)
-                probas[max_index],probas[index]=probas[index],probas[max_index]
-                for row in range(5):
-                    for col in range(5):
-                        dict_transitions[action][height][width][(row,col)]=probas[row][col]
-    np.save('Mondes/Transitions_Lopes.npy',dict_transitions)
-                
-                    
+def transition_Lopes(nombre=20):
+    for i in range(1,nombre+1):
+        dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
+        uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
+        for action in [UP,DOWN,LEFT,RIGHT,STAY]:
+            for height in range(5):
+                for width in range(5):
+                    if (height,width) not in uncertain_states:probas=np.random.dirichlet([0.1]*25)
+                    else : probas = np.random.dirichlet([1]*25)
+                    probas=probas.reshape(5,5)
+                    if action == UP and height-1 >=0: index=(height-1,width)
+                    elif action == DOWN and height+1 <5: index = (height+1,width)
+                    elif action == LEFT and width-1 >=0: index = (height,width-1)
+                    elif action == RIGHT and width+1 <5: index = (height,width+1)
+                    else : index=(height,width) 
+                    max_index=np.unravel_index(probas.argmax(),probas.shape)
+                    probas[max_index],probas[index]=probas[index],probas[max_index]
+                    for row in range(5):
+                        for col in range(5):
+                            dict_transitions[action][height][width][(row,col)]=probas[row][col]
+        np.save('Mondes/Transitions_Lopes'+str(i)+'.npy',dict_transitions)
+        
+def transition_Lopes_2(nombre=20):
+    for i in range(1,nombre+1):
+        dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
+        uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
+        for action in [UP,DOWN,LEFT,RIGHT,STAY]:
+            for height in range(5):
+                for width in range(5):
+                    if (height,width) not in uncertain_states:alpha=0.1
+                    else : alpha=1
+                    if action == UP and height-1 >=0: ind=(height-1,width)
+                    elif action == DOWN and height+1 <5: ind = (height+1,width)
+                    elif action == LEFT and width-1 >=0: ind = (height,width-1)
+                    elif action == RIGHT and width+1 <5: ind = (height,width+1)
+                    else : ind=(height,width) 
+                    etats=[(height,width), (height-1,width),(height+1,width),(height,width-1),(height,width+1)]
+                    if height-1 <0: etats.remove((height-1,width))
+                    if height+1 ==5: etats.remove((height+1,width))
+                    if width-1 <0:  etats.remove((height,width-1))
+                    if width+1==5:  etats.remove((height,width+1))
+                    values=np.random.dirichlet([alpha]*len(etats))
+                    probas={etats[i]:values[i] for i in range(len(etats))}
+                    maxValue = max(probas.values())
+                    max_ind = [k for k, v in probas.items() if v == maxValue]
+                    j=np.random.randint(len(max_ind))                   
+                    probas[max_ind[j]],probas[ind]=probas[ind],probas[max_ind[j]]
+                    for key in probas.keys() :
+                            dict_transitions[action][height][width][key]=probas[key]
+        np.save('Mondes/Transitions_Lopes'+str(i)+'.npy',dict_transitions)
+
+
                 
             

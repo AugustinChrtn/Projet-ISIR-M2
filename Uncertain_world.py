@@ -34,8 +34,10 @@ class Uncertain_State:
         for transition, reward in self.final_states.items():
             self.values[transition[0],transition[1],STAY]=reward
         self.walls=wall_state
-
         self.actions = [UP, DOWN, LEFT, RIGHT,STAY]
+        self.max_exploration=len(self.actions)*(self.height*self.width-len(self.walls))
+        
+        self.transitions=transitions
         self.UP=transitions[UP]
         self.DOWN=transitions[DOWN]
         self.LEFT=transitions[LEFT]
@@ -45,8 +47,13 @@ class Uncertain_State:
         for row in range(self.height):
             for col in range(self.width):
                 self.STAY[row][col][row,col]=1
-                
-            
+        
+        self.states=[]
+        for i in range(self.height):
+            for j in range(self.width):
+                if (i,j) not in self.walls:
+                    self.states.append((i,j))
+        
     def make_step(self, action):
         last_location = self.current_location       
         reward = self.values[last_location[0]][last_location[1]][action]

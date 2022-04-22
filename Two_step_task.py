@@ -37,6 +37,8 @@ class Two_step:
         self.final_states=[(4,RIGHT),(4,LEFT),(3,RIGHT),(3,LEFT)]
         self.current_location = self.first_location
         
+        self.states=[0,1,2,3,4]
+        
     def make_step(self, action):
         state = self.current_location       
         reward = self.R[state][action]

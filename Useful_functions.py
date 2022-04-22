@@ -7,16 +7,20 @@ import pickle
 import time
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import json
 
 from Gridworld import State
 from Complexworld import ComplexState
 from Deterministic_world import Deterministic_State
 from Uncertain_world import Uncertain_State
+from Lopesworld import Lopes_State
+from Two_step_task import Two_step
 
 from Q_learning import Q_Agent
 from Kalman import Kalman_agent
 from Kalman_sum import Kalman_agent_sum
 from Rmax import Rmax_Agent
+from BEB import BEB_Agent
 
 
 from Representation import Graphique
@@ -25,29 +29,47 @@ from Representation import Graphique
 
 #MAIN
 
-def play(environment, agent, trials=200, max_step=500, screen=1,photos=[10,20,50,100,199,300,499]):
+def play(environment, agent, trials=200, max_step=500, screen=1,photos=[10,20,50,100,199,300,499],accuracy=0.01):
     reward_per_episode = []
     step_number=[]
+    val_iteration=value_iteration(environment,agent.gamma,accuracy)
+    policy_value_error=[]
     for trial in range(trials):
         
         if screen : take_picture(agent,trial,environment,photos) #Visualisation
         
         cumulative_reward, step, game_over= 0,0,False
         while not game_over :
+            if agent.step_counter%100==0:
+                policy_value_error.append(policy_evaluation(environment,get_policy(agent),agent.gamma,accuracy)[environment.first_location]-val_iteration[environment.first_location]) 
             old_state = environment.current_location
             action = agent.choose_action() 
             reward , terminal = environment.make_step(action) #reward and if state is terminal
             new_state = environment.current_location            
             agent.learn(old_state, reward, new_state, action)                
             cumulative_reward += reward
-            step += 1            
+            step += 1
             if terminal == True or step==max_step:
                 game_over = True
                 environment.current_location=environment.first_location
                 step_number.append(agent.step_counter)
         reward_per_episode.append(cumulative_reward)
-    return reward_per_episode,step_number
+    return reward_per_episode,step_number,policy_value_error
 
+### Initializing environments ###
+
+environments_parameters={'Two_Step':{}}
+all_environments={'Lopes':Lopes_State,'Two_Step':Two_step}
+for number_world in range(1,21):
+        world=np.load('Mondes/World_'+str(number_world)+'.npy')
+        transitions=np.load('Mondes/Transitions_'+str(number_world)+'.npy',allow_pickle=True)
+        lopes_transitions=np.load('Mondes/Transitions_Lopes'+str(number_world)+'.npy',allow_pickle=True)
+        environments_parameters["D_{0}".format(number_world)] = {'world':world}
+        environments_parameters["U_{0}".format(number_world)] = {'world':world,'transitions':transitions}
+        environments_parameters["Lopes_{0}".format(number_world)]={'transitions':lopes_transitions}
+        all_environments["D_{0}".format(number_world)]=Deterministic_State
+        all_environments["U_{0}".format(number_world)]=Uncertain_State
+        all_environments["Lopes_{0}".format(number_world)]=Lopes_State
 
 
 ### PICTURES ###
@@ -57,42 +79,64 @@ def take_picture(agent,trial,environment,photos):
                     value=copy.deepcopy(agent.Q)
                     img=picture_world(environment,value)
                     pygame.image.save(img.screen,"Images/"+type(agent).__name__+"_"+str(trial)+".png")
-                    if type(agent).__name__ =='Kalman_agent_sum':
-                        curiosity=copy.deepcopy(agent.K_var)
-                        img2=picture_world(environment,curiosity)
+                    if type(agent).__name__ =='Kalman_agent_sum': bonus=copy.deepcopy(agent.K_var)
+                    if type(agent).__name__=='Rmax_Agent': bonus=copy.deepcopy(agent.R)
+                    if type(agent).__name__=='BEB_Agent': bonus=copy.deepcopy(agent.bonus)
+                    if type(agent).__name__=='BEBLP_Agent': bonus=copy.deepcopy(agent.bonus)
+                    if type(agent).__name__ in ['BEB_Agent','Rmax_Agent','Kalman_agent_sum','BEBLP_Agent']:
+                        img2=picture_world(environment,bonus)
                         pygame.image.save(img2.screen,"Images/"+type(agent).__name__+"_bonus"+str(trial)+".png")
-                    if type(agent).__name__=='Rmax_Agent':
-                        reward_bonus=copy.deepcopy(agent.R)
-                        img2=picture_world(environment,reward_bonus)
-                        pygame.image.save(img2.screen,"Images/"+type(agent).__name__+"_bonus"+str(trial)+".png")
-                    if type(agent).__name__=='BEB_Agent':
-                        beta_bonus=copy.deepcopy(agent.bonus)
-                        img2=picture_world(environment,beta_bonus)
-                        pygame.image.save(img2.screen,"Images/"+type(agent).__name__+"_bonus"+str(trial)+".png")
+                        merging_two_images(environment,"Images/"+type(agent).__name__+"_"+str(trial)+".png","Images/"+type(agent).__name__+"_bonus"+str(trial)+".png","Images/"+type(agent).__name__+" Q_table (left) and bonus (right) "+str(trial)+".png")
 
+def merging_two_images(environment,img1,img2,path):
+    pygame.init()
+    image1 = pygame.image.load(img1)
+    image2 = pygame.image.load(img2)
 
+    screen = pygame.Surface((environment.height*100+200,environment.height*50+100))
+    
+    screen.fill((0,0,0))   
+    screen.blit(image1, (50,  50))
+    screen.blit(image2, (environment.height*50+150, 50))
+
+    pygame.image.save(screen,path)
+
+    
+        
 def normalized_table(table,environment):
     max_every_state=np.zeros((environment.height,environment.width))
+    action_every_state=dict()
     for state in table.keys():
         q_values = table[state]
         max_value_state=max(q_values.values())
         max_every_state[state]=max_value_state
+        
+        best_action = np.random.choice([k for k, v in q_values.items() if v == max_value_state])
+        action_every_state[state]=best_action
     mini,maxi=np.min(max_every_state),np.max(max_every_state)
     if mini < 0 : max_every_state-=mini
     if maxi !=0 : max_every_state/=maxi     
-    return max_every_state
+    return max_every_state,action_every_state
  
 def picture_world(environment,table):       
-    precision=normalized_table(table,environment)
+    max_Q,best_actions=normalized_table(table,environment)
     init_loc=[environment.first_location[0],environment.first_location[1]]
     screen_size = environment.height*50
-    cell_width = 44.8
-    cell_height = 44.8
+    cell_width = 45
+    cell_height = 45
     cell_margin = 5
-    gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.final_states,init_loc,precision)
+    gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.final_states,init_loc,max_Q,best_actions)
     return gridworld
 
+### SAVING PARAMETERS ####
 
+def save_pickle(dictionnaire,path):
+    with open(path, 'wb') as f:
+        pickle.dump(dictionnaire, f) 
+
+def open_pickle(path):
+    with open(path, 'rb') as file:
+        return pickle.load(file)
 
 ###### OPTIMISATION ######
 
@@ -138,7 +182,6 @@ def find_best_duo_Kalman_sum(number_environment,uncertain=False):
 
 
 
-
 def find_best_trio_Q_learning(number_environment,uncertain=False):
     alpha_range=[np.around(j*1e-2,decimals=4) for j in range(40,81,4)]
     beta_range=[np.around(2*j*1e-4,decimals=5) for j in range(10,101,10)]
@@ -179,6 +222,25 @@ def find_best_trio_Kalman_sum(number_environment,uncertain=False):
                 KAS=Kalman_agent_sum(environment,gamma=gamma,variance_ob=1,variance_tr=variance_tr,curiosity_factor=curiosity_factor)
                 reward_per_episode,counter_KAS, table_mean_KAS,table_variance_KAS = play(environment,KAS,trials=200)
                 results.append([variance_tr,curiosity_factor,gamma,np.mean(reward_per_episode)])
+    return np.array(results)
+
+environment_names=['Lopes_{0}'.format(num) for num in range(1,2)]
+betas=[i for i in range(1,10,1)]
+priors=[0.1*i for i in range(1,10,1)]
+def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=5,screen=0):
+    BEB_parameters={(beta,prior):{'gamma':0.95,'beta':beta,'known_states':True,'coeff_prior':prior} for beta in betas for prior in priors}
+    results=[]
+    for name_environment in environment_names:   
+        print(name_environment)
+        environment=all_environments[name_environment](**environments_parameters[name_environment])                
+        for beta in betas :
+            print(beta)
+            for prior in priors :
+                BEB=BEB_Agent(environment,**BEB_parameters[(beta,prior)]) #Defining a new agent from the dictionary agents
+                
+                reward,step_number,policy_value_error= play(environment,BEB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy) #Playing in environment
+                
+                results.append([name_environment,beta,prior,np.mean(reward[200:])])
     return np.array(results)
 
 
@@ -236,11 +298,10 @@ def save_interactive(fig,name):
 def plot_interactive(name_fig):
     figx=pickle.load(open('Interactive/'+name_fig,'rb'))
     figx.show()
-    
+
 #Stats 
 
-
-def convergence(array,longueur=20,variation=0.2,absolu=3,artefact=3):
+def convergence(array,longueur=30,variation=0.2,absolu=3,artefact=3):
     for i in range(len(array)-longueur):
         table=array[i:i+longueur]
         mean=np.mean(table)
@@ -255,6 +316,49 @@ def convergence(array,longueur=20,variation=0.2,absolu=3,artefact=3):
             if valid : 
                 return [len(array)-len(array[i+1:]),np.mean(array[i+1:]),np.var(array[i+1:])]            
     return [len(array)-1,np.mean(array),np.var(array)]
-    
-    
-    
+
+#Evaluating a policy
+
+def value_iteration(environment,gamma,accuracy):
+    V={state:1 for state in environment.states}
+    delta=accuracy+1
+    while delta > accuracy :
+        delta=0
+        for state,value in V.items():
+            value_V=V[state]
+            V[state]=np.max([np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
+            delta=max(delta,np.abs(value_V-V[state]))
+    return V
+
+def policy_evaluation(environment,policy,gamma,accuracy):
+    V={state:1 for state in environment.states}
+    delta=accuracy+1
+    for state in V.keys():
+        if state not in policy.keys():
+            policy[state]=np.random.choice(environment.actions)
+    while delta > accuracy :
+        delta=0
+        for state,value in V.items():
+            value_V=V[state]
+            action=policy[state]
+            V[state]=np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()])
+            delta=max(delta,np.abs(value_V-V[state]))
+    return V
+
+def get_policy(agent):
+    action_every_state=dict()
+    for state in agent.Q.keys():
+        q_values = agent.Q[state]
+        max_value_state=max(q_values.values())
+        best_action = np.random.choice([k for k, v in q_values.items() if v == max_value_state])
+        action_every_state[state]=best_action 
+    return action_every_state
+
+        
+
+
+
+
+
+
+

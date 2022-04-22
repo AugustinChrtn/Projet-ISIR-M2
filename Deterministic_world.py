@@ -53,8 +53,15 @@ class Deterministic_State:
                 if col==self.width-1 or (row,col+1) in self.walls: self.RIGHT[row][col][row,col]=1
                 else : self.RIGHT[row][col][row,col+1]=1
                 self.STAY[row][col][row,col]=1
-                
-            
+        
+        self.states=[]
+        for i in range(self.height):
+            for j in range(self.width):
+                if (i,j) not in self.walls:
+                    self.states.append((i,j))
+        self.transitions=np.array([self.UP,self.DOWN,self.LEFT,self.RIGHT,self.STAY])
+        self.max_exploration=len(self.actions)*(self.height*self.width-len(self.walls))
+    
     def make_step(self, action):
         last_location = self.current_location       
         reward = self.values[last_location[0]][last_location[1]][action]

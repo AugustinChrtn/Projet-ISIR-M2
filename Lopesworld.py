@@ -12,6 +12,13 @@ def choice_dictionary(dictionary):
     values = list(dictionary.values())
     return random.choices(keys, weights=values)[0]
 
+def entropy(transitions):
+    value_entropy=0
+    for value in transitions.values():
+        if value>0:
+            value_entropy+=-value*np.log2(value)
+    return value_entropy
+
 
 class Lopes_State():
     def __init__(self,transitions):
@@ -19,7 +26,7 @@ class Lopes_State():
         self.width = 5
         self.grid = np.zeros((self.height,self.width))        
         self.final_states={(2,4,STAY):1}
-        self.values= np.array(create_matrix(self.width, self.height,[0,0,0,0,0]))
+        self.values= np.array(create_matrix(self.width, self.height,[0.,0.,0.,0.,0.]))
         self.current_location = (0,0)     
         self.first_location=(0,0)
         
@@ -31,16 +38,20 @@ class Lopes_State():
                       (2,2,UP):-0.1,(2,2,LEFT):-0.1,(2,2,RIGHT):-0.1,(2,2,DOWN):-0.1,(2,2,STAY):-0.1}
         
         for transition, reward in self.rewards.items():
-            self.values[transition[0]][transition[1]][transition[2]]=reward
-        
-        
+            self.values[transition[0],transition[1],transition[2]]=reward
+
+        self.max_exploration=125
         self.UP=transitions[UP]
         self.DOWN=transitions[DOWN]
-        self.LEFT=transitions[RIGHT]
-        self.RIGHT=transitions[LEFT]
+        self.LEFT=transitions[LEFT]
+        self.RIGHT=transitions[RIGHT]
         self.STAY=transitions[STAY]
                 
-            
+        self.states=[(i,j) for i in range(self.height) for j in range(self.width)]
+        self.transitions=transitions
+        self.uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
+        self.entropy={(state,action) : entropy(transitions[action][state]) for state in self.states for action in self.actions }   
+    
     def make_step(self, action):
         last_location = self.current_location       
         reward = self.values[last_location[0]][last_location[1]][action]
