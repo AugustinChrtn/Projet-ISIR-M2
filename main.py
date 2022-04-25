@@ -38,26 +38,26 @@ for number_world in range(1,21):
     all_environments["U_{0}".format(number_world)]=Uncertain_State
     all_environments["Lopes_{0}".format(number_world)]=Lopes_State
 
-seed=53
+seed=57
 np.random.seed(seed)
-random.seed(53)
+random.seed(57)
 
 agent_parameters={Q_Agent:{'alpha':0.5,'beta':0.05,'gamma':0.95,'exploration':'softmax'},
             Kalman_agent_sum:{'gamma':0.98,'variance_ob':1,'variance_tr':50,'curiosity_factor':1},
             Kalman_agent:{'gamma':0.9, 'variance_ob':1,'variance_tr':40},
             KalmanMB_Agent:{'gamma':0.9,'epsilon':0.1,'H_update':3,'entropy_factor':0.1,'epis_factor':50,'alpha':0.2,'gamma_epis':0.5,'variance_ob':0.02,'variance_tr':0.5},
-            QMB_Agent:{'gamma':0.95,'epsilon':0.1,'optimistic':10,'known_states':True},
-            Rmax_Agent:{'gamma':0.95, 'm':2,'Rmax':1,'known_states':True,'optimistic':1},
-            BEB_Agent:{'gamma':0.95,'beta':1,'known_states':True,'coeff_prior':0.4,'optimistic':11},
+            QMB_Agent:{'gamma':0.95,'epsilon':0.1,'optimistic':10,'known_states':False},
+            Rmax_Agent:{'gamma':0.95, 'm':2.2,'Rmax':1,'known_states':True,'VI':20},
+            BEB_Agent:{'gamma':0.95,'beta':1.7,'known_states':True,'coeff_prior':25,'optimistic':10,'informative':True},
             BEBLP_Agent:{'gamma':0.95,'beta':1,'step_update':10,'coeff_prior':0.4,'optimistic':13,'alpha':0.1},
             RmaxLP_Agent:{'gamma':0.95,'Rmax':2,'step_update':10,'alpha':0.1,'m':3.3,'coeff_prior':0.4,'optimistic':3}}
 
 
-nb_iters=1
-trials = 500
+nb_iters=10
+trials = 200
 max_step = 30
 photos=[10,30,50,100,199,300,499]
-screen=1
+screen=0
 accuracy=0.01
 
 #agents={'RA':Rmax_Agent,'BEB':BEB_Agent,'QMB':QMB_Agent,'BEBLP':BEBLP_Agent,'RALP':RmaxLP_Agent,'QA':Q_Agent,'KAS':Kalman_agent_sum,'KMB':KalmanMB_Agent}
@@ -65,7 +65,7 @@ agents={'RA':Rmax_Agent}
 
 #environments=['Lopes_{0}'.format(num) for num in range(1,21),'Two_Step']+['D_{0}'.format(num) for num in range(1,21)]+['U_{0}'.format(num) for num in range(1,21)]
 
-names_env=['Lopes_{0}'.format(num) for num in range(19,20)]
+names_env=['Lopes_{0}'.format(num) for num in range(18,19)]
 
 rewards={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
 steps={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}

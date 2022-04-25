@@ -31,11 +31,11 @@ class Lopes_State():
         self.first_location=(0,0)
         
         self.actions = [UP, DOWN, LEFT, RIGHT,STAY]
-        
-        self.rewards={(1,1,UP):-0.1,(1,1,LEFT):-0.1,(1,1,RIGHT):-0.1,(1,1,DOWN):-0.1,(1,1,STAY):-0.1,(2,4,STAY):1,
-                      (1,2,UP):-0.1,(1,2,LEFT):-0.1,(1,2,RIGHT):-0.1,(1,2,DOWN):-0.1,(1,2,STAY):-0.1,
-                      (1,3,UP):-0.1,(1,3,LEFT):-0.1,(1,3,RIGHT):-0.1,(1,3,DOWN):-0.1,(1,3,STAY):-0.1,
-                      (2,2,UP):-0.1,(2,2,LEFT):-0.1,(2,2,RIGHT):-0.1,(2,2,DOWN):-0.1,(2,2,STAY):-0.1}
+        malus=-0.1
+        self.rewards={(1,1,UP):malus,(1,1,LEFT):malus,(1,1,RIGHT):malus,(1,1,DOWN):malus,(1,1,STAY):malus,(2,4,STAY):1,
+                      (1,2,UP):malus,(1,2,LEFT):malus,(1,2,RIGHT):malus,(1,2,DOWN):malus,(1,2,STAY):malus,
+                      (1,3,UP):malus,(1,3,LEFT):malus,(1,3,RIGHT):malus,(1,3,DOWN):malus,(1,3,STAY):malus,
+                      (2,2,UP):malus,(2,2,LEFT):malus,(2,2,RIGHT):malus,(2,2,DOWN):malus,(2,2,STAY):malus}
         
         for transition, reward in self.rewards.items():
             self.values[transition[0],transition[1],transition[2]]=reward

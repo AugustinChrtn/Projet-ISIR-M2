@@ -14,7 +14,7 @@ def count_to_dirichlet(dictionnaire):
 
 class BEB_Agent:
 
-    def __init__(self,environment, gamma=0.95, beta=1,known_states=False,coeff_prior=0.5,optimistic=0.5):
+    def __init__(self,environment, gamma=0.95, beta=1,known_states=False,coeff_prior=0.5,optimistic=0.5,informative=False):
         
         self.environment=environment
         self.gamma = gamma
@@ -39,6 +39,7 @@ class BEB_Agent:
         
         self.coeff_prior=coeff_prior
         self.optimistic=optimistic
+        self.informative=informative
         if self.known_states: self.ajout_states()
             
     def learn(self,old_state,reward,new_state,action):
@@ -80,7 +81,13 @@ class BEB_Agent:
         self.states=self.environment.states
         for state_1 in self.states:
             for action in self.environment.actions:
-                for state_2 in self.states:
-                    self.prior[state_1][action][state_2]=self.coeff_prior
+                if self.informative : 
+                    prior_transitions=self.environment.transitions[action][state_1].copy()
+                    prior_coeff_transitions={k:max(self.coeff_prior*v,1e-5) for k,v in prior_transitions.items()}
+                    self.prior[state_1][action]=prior_coeff_transitions
+                    """for state_2 in self.environment.transitions[action][state_1].keys():
+                        self.prior[state_1][action][state_2]=self.coeff_prior"""                        
+                else : 
+                    for state_2 in self.states : self.prior[state_1][action][state_2]=self.prior[state_1][action][state_2]=self.coeff_prior
                 self.bonus[state_1][action]=self.beta
                 self.Q[state_1][action]=self.beta*self.optimistic
