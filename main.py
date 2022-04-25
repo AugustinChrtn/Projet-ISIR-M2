@@ -152,12 +152,12 @@ pygame.quit()
 
 
 ### Save results ###
-
+"""
 results={'seed':seed,'nb_iters':nb_iters,'trials':trials,'max_step':max_step,'agent_parameters':agent_parameters,'agents':agents,'environments':names_env,'rewards':rewards,'step_number':step_number,'pol_error':pol_error}
 
 temps=str(round(time.time()))
 save_pickle(results,'Results/'+temps+'.pickle')
-test=open_pickle('Results/'+temps+'.pickle')
+test=open_pickle('Results/'+temps+'.pickle')"""
 
 
 
