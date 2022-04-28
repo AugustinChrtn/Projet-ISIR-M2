@@ -46,7 +46,7 @@ class Rmax_Agent:
                         self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action]                         
                         for next_state in self.nSAS[old_state][action].keys():
                             self.tSAS[old_state][action][next_state] = self.nSAS[old_state][action][next_state]/self.nSA[old_state][action]
-                        for j in range(self.VI):
+                        for j in range(self.VI): #cf formule logarithme Strehl 2009 PAC Analysis
                             for state_known,action_known in self.known_state_action:
                                 self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
     def choose_action(self):

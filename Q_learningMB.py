@@ -40,8 +40,13 @@ class QMB_Agent:
                     for next_state in self.nSAS[old_state][action].keys():
                         self.tSAS[old_state][action][next_state] = self.nSAS[old_state][action][next_state]/self.nSA[old_state][action]
 
-                    self.Q[old_state][action]=self.R[old_state][action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[old_state][action][next_state] for next_state in self.tSAS[old_state][action].keys()])
+                    #self.Q[old_state][action]=self.R[old_state][action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[old_state][action][next_state] for next_state in self.tSAS[old_state][action].keys()])
                     
+                    if self.step_counter%10==0:
+                        for i in range(10):
+                            for visited_state in self.nSA.keys():
+                                for taken_action in self.nSA[visited_state].keys():
+                                    self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action].keys()])
                     
     def choose_action(self):
         self.step_counter+=1

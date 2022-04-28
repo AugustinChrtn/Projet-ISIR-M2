@@ -273,8 +273,7 @@ def montrer_transition(world_number,action,row,col):
     pygame.time.delay(3000)
     pygame.quit()
     
-def transition_Lopes(nombre=20):
-    for i in range(1,nombre+1):
+def transition_Lopes():
         dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
         uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
         for action in [UP,DOWN,LEFT,RIGHT,STAY]:
@@ -293,10 +292,9 @@ def transition_Lopes(nombre=20):
                     for row in range(5):
                         for col in range(5):
                             dict_transitions[action][height][width][(row,col)]=probas[row][col]
-        np.save('Mondes/Transitions_Lopes'+str(i)+'.npy',dict_transitions)
+        np.save('Mondes/Transitions_Lopes.npy',dict_transitions)
         
-def transition_Lopes_2(nombre=20):
-    for i in range(1,nombre+1):
+def transition_Lopes_2():
         dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
         uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
         for action in [UP,DOWN,LEFT,RIGHT,STAY]:
@@ -322,8 +320,56 @@ def transition_Lopes_2(nombre=20):
                     probas[max_ind[j]],probas[ind]=probas[ind],probas[max_ind[j]]
                     for key in probas.keys() :
                             dict_transitions[action][height][width][key]=probas[key]
-        np.save('Mondes/Transitions_Lopes'+str(i)+'.npy',dict_transitions)
+        np.save('Mondes/Transitions_Lopes.npy',dict_transitions)
+        
+        
+def transition_Lopes_3():
+        dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
+        uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
+        for action in [UP,DOWN,LEFT,RIGHT,STAY]:
+            for height in range(5):
+                for width in range(5):
+                    if (height,width) not in uncertain_states:alpha=0.1
+                    else : alpha=1
+                    if action == UP and height-1 >=0: ind=(height-1,width)
+                    elif action == DOWN and height+1 <5: ind = (height+1,width)
+                    elif action == LEFT and width-1 >=0: ind = (height,width-1)
+                    elif action == RIGHT and width+1 <5: ind = (height,width+1)
+                    else : ind=(height,width) 
+                    etats=[(height,width), (height-1,width),(height+1,width),(height,width-1),(height,width+1)]
+                    values=np.random.dirichlet([alpha]*5)
+                    values=np.random.dirichlet([alpha]*len(etats))
+                    probas={etats[i]:values[i] for i in range(len(etats))}
+                    maxValue = max(probas.values())
+                    max_ind = [k for k, v in probas.items() if v == maxValue]
+                    j=np.random.randint(len(max_ind))                   
+                    probas[max_ind[j]],probas[ind]=probas[ind],probas[max_ind[j]]
+                    if height-1 <0: 
+                        probas[(height,width)]+=probas[(height-1,width)]
+                        del probas[(height-1,width)]
+                    if height+1 ==5:
+                        probas[(height,width)]+=probas[(height+1,width)]
+                        del probas[(height+1,width)]
+                    if width-1 <0:
+                        probas[(height,width)]+=probas[(height,width-1)]
+                        del probas[(height,width-1)]
+                    if width+1==5:
+                        probas[(height,width)]+=probas[(height,width+1)]
+                        del probas[(height,width+1)]
+                    for key in probas.keys() :
+                            dict_transitions[action][height][width][key]=probas[key]
+        np.save('Mondes/Transitions_Lopes.npy',dict_transitions)
 
-
+def non_stat_Lopes():
+    transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
+    optimal_path=[(0,0),(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4),(2,4)]
+    index_changed=np.random.randint(len(optimal_path))
+    state_to_change=optimal_path[index_changed]
+    transitions_up=transitions[0][state_to_change]
+    for action in range(4):
+        transitions[action]=transitions[action+1][state_to_change]
+    transitions[4][state_to_change]=transitions_up
+    np.save('Mondes/Transitions_Lopes_non_stat.npy',transitions)
+    
                 
             

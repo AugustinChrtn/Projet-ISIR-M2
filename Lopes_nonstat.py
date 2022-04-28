@@ -20,8 +20,8 @@ def entropy(transitions):
     return value_entropy
 
 
-class Lopes_State():
-    def __init__(self,transitions):
+class Lopes_nostat_State():
+    def __init__(self,transitions,transitions2):
         self.height = 5
         self.width = 5
         self.grid = np.zeros((self.height,self.width))        
@@ -49,10 +49,15 @@ class Lopes_State():
                 
         self.states=[(i,j) for i in range(self.height) for j in range(self.width)]
         self.transitions=transitions
+        self.transitions2=transitions2
         self.uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
         self.entropy={(state,action) : entropy(transitions[action][state]) for state in self.states for action in self.actions }   
-    
+        self.number_steps=0
+        
     def make_step(self, action):
+        self.number_steps+=1
+        if self.number_steps==900:
+            self.change_dynamics()
         last_location = self.current_location       
         reward = self.values[last_location[0]][last_location[1]][action]
         if action == UP:
@@ -66,4 +71,13 @@ class Lopes_State():
         elif action == STAY:
             self.current_location = choice_dictionary(self.STAY[last_location[0]][last_location[1]])
         return reward, (last_location[0],last_location[1],action) in self.final_states.keys()
+    
+    def change_dynamics(self):
+        self.transitions=self.transitions2
+        self.UP=self.transitions[UP]
+        self.DOWN=self.transitions[DOWN]
+        self.LEFT=self.transitions[LEFT]
+        self.RIGHT=self.transitions[RIGHT]
+        self.STAY=self.transitions[STAY]
+        self.entropy={(state,action) : entropy(self.transitions[action][state]) for state in self.states for action in self.actions } 
         

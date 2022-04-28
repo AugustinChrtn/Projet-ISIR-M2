@@ -13,7 +13,7 @@ def count_to_dirichlet(dictionnaire):
 
 class BEBLP_Agent:
 
-    def __init__(self,environment, gamma=0.95, beta=1,step_update=10,alpha=0.5,coeff_prior=0.5,optimistic=1):
+    def __init__(self,environment, gamma=0.95, beta=1,step_update=10,alpha=0.5,coeff_prior=0.5):
         
         self.environment=environment
         self.gamma = gamma
@@ -44,29 +44,42 @@ class BEBLP_Agent:
         self.alpha=alpha
         
         self.coeff_prior=coeff_prior
-        self.optimistic=optimistic
+        self.known_state_action=[]
         self.ajout_states()
         
     def learn(self,old_state,reward,new_state,action):
-                    
-                    
-                    self.nSA[old_state][action] +=1
-                    self.Rsum[old_state][action] += reward
-                    self.nSAS[old_state][action][new_state] += 1
-                    self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action]
-                    self.prior[old_state][action][new_state]+=1
-                    #Modifier les probabilités de transition selon le compteur de passages avec distribution de dirichlet
-                    self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
-                    
-                    
-                    if self.nSA[old_state][action]%self.step_update==0:                    
-                        new_CV,new_variance=self.cross_validation(self.prior[old_state][action],self.nSAS[old_state][action])
-                        self.LP[old_state][action]=max(self.CV[old_state][action]-new_CV+self.alpha*np.sqrt(new_variance),0.001)
-                        self.CV[old_state][action]=new_CV
-                        
-                    self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
-                    self.Q[old_state][action]=self.R[old_state][action]+self.bonus[old_state][action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[old_state][action][next_state] for next_state in self.tSAS[old_state][action].keys()])
-                    
+                                        
+        self.nSA[old_state][action] +=1
+        self.Rsum[old_state][action] += reward
+        self.nSAS[old_state][action][new_state] += 1
+        self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action]
+        self.prior[old_state][action][new_state]+=1
+        
+        #Modifier les probabilités de transition selon le prior avec distribution de dirichlet
+        self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
+        
+        #Ajout du bonus qui dépend du nombre de passages
+        self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
+        
+        if self.LP[old_state][action]<1:
+            if(old_state,action) not in self.known_state_action:
+            #self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
+                self.known_state_action.append((old_state,action))
+                for i in range(50):
+                    for state_known,action_known in self.known_state_action:
+                        self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+        else : 
+            if (old_state,action) in self.known_state_action: self.known_state_action.remove((old_state,action))     
+    
+        
+        if self.nSA[old_state][action]%self.step_update==0:                    
+            new_CV,new_variance=self.cross_validation(self.prior[old_state][action],self.nSAS[old_state][action])
+            self.LP[old_state][action]=max(self.CV[old_state][action]-new_CV+self.alpha*np.sqrt(new_variance),0.001)
+            self.CV[old_state][action]=new_CV
+    
+    
+    
+    
     def choose_action(self): #argmax pour choisir l'action
         self.step_counter+=1
         state=self.environment.current_location
@@ -85,7 +98,7 @@ class BEBLP_Agent:
                 for state_2 in self.states:
                     self.prior[state_1][action][state_2]=self.coeff_prior
                 self.bonus[state_1][action]=self.beta
-                self.Q[state_1][action]=self.optimistic*self.beta
+                self.Q[state_1][action]=1/(1-self.gamma)+self.beta
                 self.CV[state_1][action]=np.log(number_states)
                 self.LP[state_1][action]=np.log(number_states)
                 

@@ -14,7 +14,7 @@ def count_to_dirichlet(dictionnaire):
 
 class BEB_Agent:
 
-    def __init__(self,environment, gamma=0.95, beta=1,known_states=False,coeff_prior=0.5,optimistic=0.5,informative=False):
+    def __init__(self,environment, gamma=0.95, beta=1,known_states=True,coeff_prior=0.5,informative=False):
         
         self.environment=environment
         self.gamma = gamma
@@ -38,8 +38,8 @@ class BEB_Agent:
         self.prior=defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
         
         self.coeff_prior=coeff_prior
-        self.optimistic=optimistic
         self.informative=informative
+        self.known_state_action=[]
         if self.known_states: self.ajout_states()
             
     def learn(self,old_state,reward,new_state,action):
@@ -58,7 +58,12 @@ class BEB_Agent:
                     #Ajout du bonus qui dépend du nombre de passages
                     self.bonus[old_state][action]=self.beta/(1+self.nSA[old_state][action])
                     
-                    self.Q[old_state][action]=self.R[old_state][action]+self.bonus[old_state][action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[old_state][action][next_state] for next_state in self.tSAS[old_state][action].keys()])                  
+                    if self.nSA[old_state][action]==5:
+                        self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
+                        self.known_state_action.append((old_state,action))
+                        for i in range(50):
+                            for state_known,action_known in self.known_state_action:
+                                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
 
     def choose_action(self): #argmax pour choisir l'action
         self.step_counter+=1
@@ -75,7 +80,7 @@ class BEB_Agent:
         if state not in known_states:
             for move in self.environment.actions:
                 self.bonus[state][move]=self.beta
-                self.Q[state][move]=self.beta*self.optimistic
+                self.Q[state][move]=1/(1-self.gamma)+self.beta
     
     def ajout_states(self):
         self.states=self.environment.states
@@ -90,4 +95,4 @@ class BEB_Agent:
                 else : 
                     for state_2 in self.states : self.prior[state_1][action][state_2]=self.prior[state_1][action][state_2]=self.coeff_prior
                 self.bonus[state_1][action]=self.beta
-                self.Q[state_1][action]=self.beta*self.optimistic
+                self.Q[state_1][action]=1/(1-self.gamma)+self.beta

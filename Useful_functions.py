@@ -32,7 +32,7 @@ from Representation import Graphique
 def play(environment, agent, trials=200, max_step=500, screen=1,photos=[10,20,50,100,199,300,499],accuracy=0.01):
     reward_per_episode = []
     step_number=[]
-    val_iteration=value_iteration(environment,agent.gamma,accuracy)
+    val_iteration,_=value_iteration(environment,agent.gamma,accuracy)
     policy_value_error=[]
     for trial in range(trials):
         
@@ -58,18 +58,15 @@ def play(environment, agent, trials=200, max_step=500, screen=1,photos=[10,20,50
 
 ### Initializing environments ###
 
-environments_parameters={'Two_Step':{}}
+environments_parameters={'Two_Step':{},'Lopes':{'transitions':np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)}}
 all_environments={'Lopes':Lopes_State,'Two_Step':Two_step}
 for number_world in range(1,21):
-        world=np.load('Mondes/World_'+str(number_world)+'.npy')
-        transitions=np.load('Mondes/Transitions_'+str(number_world)+'.npy',allow_pickle=True)
-        lopes_transitions=np.load('Mondes/Transitions_Lopes'+str(number_world)+'.npy',allow_pickle=True)
-        environments_parameters["D_{0}".format(number_world)] = {'world':world}
-        environments_parameters["U_{0}".format(number_world)] = {'world':world,'transitions':transitions}
-        environments_parameters["Lopes_{0}".format(number_world)]={'transitions':lopes_transitions}
-        all_environments["D_{0}".format(number_world)]=Deterministic_State
-        all_environments["U_{0}".format(number_world)]=Uncertain_State
-        all_environments["Lopes_{0}".format(number_world)]=Lopes_State
+    world=np.load('Mondes/World_'+str(number_world)+'.npy')
+    transitions=np.load('Mondes/Transitions_'+str(number_world)+'.npy',allow_pickle=True)
+    environments_parameters["D_{0}".format(number_world)] = {'world':world}
+    environments_parameters["U_{0}".format(number_world)] = {'world':world,'transitions':transitions}
+    all_environments["D_{0}".format(number_world)]=Deterministic_State
+    all_environments["U_{0}".format(number_world)]=Uncertain_State
 
 
 ### PICTURES ###
@@ -224,7 +221,7 @@ def find_best_trio_Kalman_sum(number_environment,uncertain=False):
                 results.append([variance_tr,curiosity_factor,gamma,np.mean(reward_per_episode)])
     return np.array(results)
 
-environment_names=['Lopes_{0}'.format(num) for num in range(1,2)]
+environment_names=['Lopes']
 betas=[i for i in range(1,10,1)]
 priors=[0.1*i for i in range(1,10,1)]
 def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=5,screen=0):
@@ -321,6 +318,7 @@ def convergence(array,longueur=30,variation=0.2,absolu=3,artefact=3):
 
 def value_iteration(environment,gamma,accuracy):
     V={state:1 for state in environment.states}
+    action={state:0 for state in environment.states}
     delta=accuracy+1
     while delta > accuracy :
         delta=0
@@ -328,7 +326,22 @@ def value_iteration(environment,gamma,accuracy):
             value_V=V[state]
             V[state]=np.max([np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
             delta=max(delta,np.abs(value_V-V[state]))
-    return V
+            action[state]=np.argmax([np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
+    return V,action
+
+def plot_VI(environment,gamma,accuracy): #only in gridworlds
+    V,action=value_iteration(environment,gamma,accuracy)
+    V_2=np.zeros((environment.height,environment.width))
+    for state,value in V.items():
+        V_2[state]=value
+    init_loc=[environment.first_location[0],environment.first_location[1]]
+    screen_size = environment.height*50
+    cell_width = 45
+    cell_height = 45
+    cell_margin = 5
+    gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.final_states,init_loc,V_2,action)
+    pygame.image.save(gridworld.screen,"Images/VI_"+type(environment).__name__+"_"+str(gamma)+".png")
+
 
 def policy_evaluation(environment,policy,gamma,accuracy):
     V={state:1 for state in environment.states}
