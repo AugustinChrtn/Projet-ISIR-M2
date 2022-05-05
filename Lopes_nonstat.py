@@ -20,7 +20,7 @@ def entropy(transitions):
     return value_entropy
 
 
-class Lopes_nostat_State():
+class Lopes_nostat():
     def __init__(self,transitions,transitions2):
         self.height = 5
         self.width = 5
@@ -53,11 +53,12 @@ class Lopes_nostat_State():
         self.uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
         self.entropy={(state,action) : entropy(transitions[action][state]) for state in self.states for action in self.actions }   
         self.number_steps=0
-        
+        self.changed=False
     def make_step(self, action):
         self.number_steps+=1
         if self.number_steps==900:
             self.change_dynamics()
+            self.changed=True
         last_location = self.current_location       
         reward = self.values[last_location[0]][last_location[1]][action]
         if action == UP:

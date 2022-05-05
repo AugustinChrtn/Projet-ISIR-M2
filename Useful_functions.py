@@ -21,7 +21,8 @@ from Kalman import Kalman_agent
 from Kalman_sum import Kalman_agent_sum
 from Rmax import Rmax_Agent
 from BEB import BEB_Agent
-
+from BEBLP import BEBLP_Agent
+from RmaxLP import RmaxLP_Agent
 
 from Representation import Graphique
 
@@ -29,18 +30,22 @@ from Representation import Graphique
 
 #MAIN
 
-def play(environment, agent, trials=200, max_step=500, screen=1,photos=[10,20,50,100,199,300,499],accuracy=0.01):
+def play(environment, agent, trials=200, max_step=500, screen=1,photos=[10,20,50,100,199,300,499],accuracy=0.01,pas_VI=100):
     reward_per_episode = []
     step_number=[]
-    val_iteration,_=value_iteration(environment,agent.gamma,accuracy)
     policy_value_error=[]
+    pol_updated=False
     for trial in range(trials):
-        
+        val_iteration,_=value_iteration(environment,agent.gamma,accuracy)
         if screen : take_picture(agent,trial,environment,photos) #Visualisation
         
         cumulative_reward, step, game_over= 0,0,False
         while not game_over :
-            if agent.step_counter%100==0:
+            if type(environment).__name__ in ['Uncertain_State_U','Uncertain_State_B','Deterministic_no_stat','Lopes_nostat'] and not pol_updated:
+                if environment.changed :
+                    pol_updated=True
+                    val_iteration,_=value_iteration(environment,agent.gamma,accuracy)
+            if agent.step_counter%pas_VI==0:
                 policy_value_error.append(policy_evaluation(environment,get_policy(agent),agent.gamma,accuracy)[environment.first_location]-val_iteration[environment.first_location]) 
             old_state = environment.current_location
             action = agent.choose_action() 
@@ -75,15 +80,18 @@ def take_picture(agent,trial,environment,photos):
             if trial in photos:
                     value=copy.deepcopy(agent.Q)
                     img=picture_world(environment,value)
-                    pygame.image.save(img.screen,"Images/"+type(agent).__name__+"_"+str(trial)+".png")
+                    if type(agent).__name__ in ['BEB_Agent','Rmax_Agent','Kalman_agent_sum','BEBLP_Agent','RmaxLP_Agent']:
+                        pygame.image.save(img.screen,"Images/Solo/"+type(agent).__name__+"_"+type(environment).__name__+"_"+str(trial)+".png")
+                    else : pygame.image.save(img.screen,"Images/"+type(agent).__name__+"_"+type(environment).__name__+"_"+str(trial)+".png")
                     if type(agent).__name__ =='Kalman_agent_sum': bonus=copy.deepcopy(agent.K_var)
                     if type(agent).__name__=='Rmax_Agent': bonus=copy.deepcopy(agent.R)
                     if type(agent).__name__=='BEB_Agent': bonus=copy.deepcopy(agent.bonus)
                     if type(agent).__name__=='BEBLP_Agent': bonus=copy.deepcopy(agent.bonus)
-                    if type(agent).__name__ in ['BEB_Agent','Rmax_Agent','Kalman_agent_sum','BEBLP_Agent']:
+                    if type(agent).__name__=='RmaxLP_Agent': bonus=copy.deepcopy(agent.R)
+                    if type(agent).__name__ in ['BEB_Agent','Rmax_Agent','Kalman_agent_sum','BEBLP_Agent','RmaxLP_Agent']:
                         img2=picture_world(environment,bonus)
-                        pygame.image.save(img2.screen,"Images/"+type(agent).__name__+"_bonus"+str(trial)+".png")
-                        merging_two_images(environment,"Images/"+type(agent).__name__+"_"+str(trial)+".png","Images/"+type(agent).__name__+"_bonus"+str(trial)+".png","Images/"+type(agent).__name__+" Q_table (left) and bonus (right) "+str(trial)+".png")
+                        pygame.image.save(img2.screen,"Images/Solo/"+type(agent).__name__+"_bonus"+"_"+type(environment).__name__+str(trial)+".png")
+                        merging_two_images(environment,"Images/Solo/"+type(agent).__name__+"_"+type(environment).__name__+"_"+str(trial)+".png","Images/Solo/"+type(agent).__name__+"_bonus"+"_"+type(environment).__name__+str(trial)+".png","Images/"+type(agent).__name__+"_"+type(environment).__name__+" Q_table (left) and bonus (right) "+str(trial)+".png")
 
 def merging_two_images(environment,img1,img2,path):
     pygame.init()
@@ -221,26 +229,6 @@ def find_best_trio_Kalman_sum(number_environment,uncertain=False):
                 results.append([variance_tr,curiosity_factor,gamma,np.mean(reward_per_episode)])
     return np.array(results)
 
-environment_names=['Lopes']
-betas=[i for i in range(1,10,1)]
-priors=[0.1*i for i in range(1,10,1)]
-def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=5,screen=0):
-    BEB_parameters={(beta,prior):{'gamma':0.95,'beta':beta,'known_states':True,'coeff_prior':prior} for beta in betas for prior in priors}
-    results=[]
-    for name_environment in environment_names:   
-        print(name_environment)
-        environment=all_environments[name_environment](**environments_parameters[name_environment])                
-        for beta in betas :
-            print(beta)
-            for prior in priors :
-                BEB=BEB_Agent(environment,**BEB_parameters[(beta,prior)]) #Defining a new agent from the dictionary agents
-                
-                reward,step_number,policy_value_error= play(environment,BEB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy) #Playing in environment
-                
-                results.append([name_environment,beta,prior,np.mean(reward[200:])])
-    return np.array(results)
-
-
 ######## VISUALISATION ########
 
 def convert_from_default(dic):
@@ -298,7 +286,7 @@ def plot_interactive(name_fig):
 
 #Stats 
 
-def convergence(array,longueur=30,variation=0.2,absolu=3,artefact=3):
+def convergence(array,longueur=30,variation=0.2,absolu=0.1,artefact=3):
     for i in range(len(array)-longueur):
         table=array[i:i+longueur]
         mean=np.mean(table)
@@ -334,6 +322,9 @@ def plot_VI(environment,gamma,accuracy): #only in gridworlds
     V_2=np.zeros((environment.height,environment.width))
     for state,value in V.items():
         V_2[state]=value
+        if V_2[state]<0:V_2[state]=0
+    max_value=np.max(V_2)
+    V_2=V_2/max_value
     init_loc=[environment.first_location[0],environment.first_location[1]]
     screen_size = environment.height*50
     cell_width = 45
@@ -367,11 +358,57 @@ def get_policy(agent):
         action_every_state[state]=best_action 
     return action_every_state
 
-        
+
+
+environment_names=['Lopes']
+betas=[i for i in range(1,2)]
+priors=[1*i for i in range(1,100,10)]
+def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=5,screen=0):
+    BEB_parameters={(beta,prior):{'gamma':0.95,'beta':beta,'known_states':True,'coeff_prior':prior} for beta in betas for prior in priors}
+    pol_error={}
+    for name_environment in environment_names:   
+        print(name_environment)
+        environment=all_environments[name_environment](**environments_parameters[name_environment])                
+        for beta in betas :
+            print(beta)
+            for prior in priors :
+                BEB=BEB_Agent(environment,**BEB_parameters[(beta,prior)]) #Defining a new agent from the dictionary agents
+                
+                reward,step_number,policy_value_error= play(environment,BEB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy) #Playing in environment
+                index_convergence=-1
+                for i in range(len(policy_value_error)-1):
+                    if policy_value_error[i] >-0.5 and policy_value_error[i+1] >-0.5 :
+                        index_convergence=i*50
+                        break
+                pol_error[beta,prior]=index_convergence
+    return pol_error
+
+
+alphas=[0.1*i for i in range(1,10,1)]
+ms=[0.1*i for i in range(1,17,2)]
+def fitting_RALP(environment_names,alphas,ms,trials = 200,max_step = 30,accuracy=.05,screen=0):
+    RALP_parameters={(alpha,m):{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':alpha,'m':m,'VI':50} for alpha in alphas for m in ms}
+    pol_error={}
+    for name_environment in environment_names:   
+        print(name_environment)
+        environment=all_environments[name_environment](**environments_parameters[name_environment])                
+        for alpha in alphas :
+            print(alpha)
+            for m in ms :
+                RALP=RmaxLP_Agent(environment,**RALP_parameters[(alpha,m)]) #Defining a new agent from the dictionary agents
+                
+                reward,step_number,policy_value_error= play(environment,RALP,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy) #Playing in environment
+                index_convergence=-1
+                for i in range(len(policy_value_error)-1):
+                    if policy_value_error[i] >-0.5 and policy_value_error[i+1] >-0.5 :
+                        index_convergence=i*50
+                        break
+                pol_error[alpha,m]=index_convergence
+    return pol_error
 
 
 
-
+#a=fitting_BEB(environment_names,betas,priors)
 
 
 

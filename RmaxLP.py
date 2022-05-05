@@ -14,8 +14,8 @@ class RmaxLP_Agent:
         self.R = defaultdict(lambda: defaultdict(lambda: 0.0))
         self.Rsum = defaultdict(lambda: defaultdict(lambda: 0.0))
         
-        self.nSA = defaultdict(lambda: defaultdict(lambda: 0.0))
-        self.nSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
+        self.nSA = defaultdict(lambda: defaultdict(lambda: 0))
+        self.nSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0)))
         
         self.tSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
         
@@ -32,7 +32,6 @@ class RmaxLP_Agent:
         self.VI=VI
         self.known_state_action=[]
         self.ajout_states()
-        
     def learn(self,old_state,reward,new_state,action):
                     
                     
@@ -55,9 +54,9 @@ class RmaxLP_Agent:
                         self.R[old_state][action]=self.Rmax      
                         if (old_state,action) in self.known_state_action: self.known_state_action.remove((old_state,action))
                     
-                    if self.nSA[old_state][action]%self.step_update==0:                    
+                    if self.nSA[old_state][action]%self.step_update==3:                    
                         new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
-                        self.LP[old_state][action]=max(self.CV[old_state][action]-new_CV+self.alpha*np.sqrt(new_variance),0.001)
+                        self.LP[old_state][action]=self.CV[old_state][action]-new_CV+self.alpha*np.sqrt(new_variance)
                         self.CV[old_state][action]=new_CV
                         
                         
@@ -79,28 +78,19 @@ class RmaxLP_Agent:
                 self.Q[state_1][action]=self.Rmax/(1-self.gamma)
                 self.CV[state_1][action]=np.log(number_states)
                 self.LP[state_1][action]=np.log(number_states)
+                #self.LP[state_1][action]=np.log(number_states)
     
     def cross_validation(self,nSAS_SA):
         cv,v=0,[]
-        for key,value in nSAS_SA.items():
-            for i in range(int(value)):
-                keys,values=[],[]
-                for next_state, next_state_count in nSAS_SA.items():
-                        keys.append(next_state)
-                        values.append(next_state_count)
-                        if next_state==key:
-                            values[-1]-=1
-                for j in range(len(keys)):
-                    if keys[j]==key:
-                        if values[j]==0:
-                            cv+=1 #np.log(1/sum(nSAS_SA.values())) ?
-                            v.append(1) #np.log(1/sum(nSAS_SA.values())) ?
-                        else :
-                            cv+=np.log(values[j])
-                            v.append(np.log(values[j]))
+        for next_state,next_state_count in nSAS_SA.items():
+            value=(next_state_count-1)/sum(nSAS_SA.values())
+            if value ==0: log_value=-2
+            else: log_value=np.log(value)
+            cv-=next_state_count*log_value
+            v+=[-log_value]*next_state_count
         v=np.array(v)
         cardinal=sum(nSAS_SA.values())
-        cross_validation =1/cardinal*cv
-        v=(v-cross_validation)**2
-        variance_cv=1/cardinal*np.sum(v)
+        cross_validation =cv/cardinal
+        var=(v-cross_validation)**2
+        variance_cv=np.sum(var)/cardinal
         return cross_validation,variance_cv

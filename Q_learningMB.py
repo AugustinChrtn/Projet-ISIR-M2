@@ -42,8 +42,8 @@ class QMB_Agent:
 
                     #self.Q[old_state][action]=self.R[old_state][action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[old_state][action][next_state] for next_state in self.tSAS[old_state][action].keys()])
                     
-                    if self.step_counter%10==0:
-                        for i in range(10):
+                    if self.step_counter%40==0:
+                        for i in range(20):
                             for visited_state in self.nSA.keys():
                                 for taken_action in self.nSA[visited_state].keys():
                                     self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action].keys()])
@@ -66,7 +66,7 @@ class QMB_Agent:
         known_states=self.Q.keys()
         if state not in known_states:
             for action in self.environment.actions:
-                self.Q[state][action]=self.optimistic
+                self.Q[state][action]=1/(1-self.gamma   )
     
     def ajout_states(self):
         self.states=self.environment.states

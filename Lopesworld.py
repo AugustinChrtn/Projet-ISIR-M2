@@ -31,7 +31,7 @@ class Lopes_State():
         self.first_location=(0,0)
         
         self.actions = [UP, DOWN, LEFT, RIGHT,STAY]
-        malus=-1
+        malus=-.1
         self.rewards={(1,1,UP):malus,(1,1,LEFT):malus,(1,1,RIGHT):malus,(1,1,DOWN):malus,(1,1,STAY):malus,(2,4,STAY):1,
                       (1,2,UP):malus,(1,2,LEFT):malus,(1,2,RIGHT):malus,(1,2,DOWN):malus,(1,2,STAY):malus,
                       (1,3,UP):malus,(1,3,LEFT):malus,(1,3,RIGHT):malus,(1,3,DOWN):malus,(1,3,STAY):malus,

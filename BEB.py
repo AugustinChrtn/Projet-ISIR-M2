@@ -14,7 +14,7 @@ def count_to_dirichlet(dictionnaire):
 
 class BEB_Agent:
 
-    def __init__(self,environment, gamma=0.95, beta=1,known_states=True,coeff_prior=0.5,informative=False):
+    def __init__(self,environment, gamma=0.95, beta=1,known_states=True,coeff_prior=0.01,informative=False):
         
         self.environment=environment
         self.gamma = gamma
@@ -58,13 +58,18 @@ class BEB_Agent:
                     #Ajout du bonus qui dépend du nombre de passages
                     self.bonus[old_state][action]=self.beta/(1+self.nSA[old_state][action])
                     
-                    if self.nSA[old_state][action]==5:
+                    if self.nSA[old_state][action]==4:
                         self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
                         self.known_state_action.append((old_state,action))
-                        for i in range(50):
+                        for i in range(30):
                             for state_known,action_known in self.known_state_action:
                                     self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-
+                   
+                    """if self.step_counter%200==10:
+                        for i in range(10):
+                            for state_known,action_known in self.known_state_action:
+                                self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+                    """
     def choose_action(self): #argmax pour choisir l'action
         self.step_counter+=1
         state=self.environment.current_location
@@ -86,12 +91,14 @@ class BEB_Agent:
         self.states=self.environment.states
         for state_1 in self.states:
             for action in self.environment.actions:
-                if self.informative : 
+                if self.informative :
+                    """for state_2 in self.environment.transitions[action][state_1].keys(): 
+                        self.prior[state_1][action][state_2]=self.coeff_prior"""
                     prior_transitions=self.environment.transitions[action][state_1].copy()
-                    prior_coeff_transitions={k:max(self.coeff_prior*v,1e-5) for k,v in prior_transitions.items()}
-                    self.prior[state_1][action]=prior_coeff_transitions
-                    """for state_2 in self.environment.transitions[action][state_1].keys():
-                        self.prior[state_1][action][state_2]=self.coeff_prior"""                        
+                    prior_coeff_transitions={k:self.coeff_prior*1e-5 for k in self.states}
+                    for k,v in prior_transitions.items():
+                        prior_coeff_transitions[k]=max(self.coeff_prior*v,prior_coeff_transitions[k])
+                    self.prior[state_1][action]=prior_coeff_transitions                 
                 else : 
                     for state_2 in self.states : self.prior[state_1][action][state_2]=self.prior[state_1][action][state_2]=self.coeff_prior
                 self.bonus[state_1][action]=self.beta

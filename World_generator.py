@@ -6,6 +6,9 @@ def create_matrix(width,height,liste):
 import random
 from Monde_representation import Monde
 from Representation import Transition
+from Lopesworld import Lopes_State
+import copy
+from collections import defaultdict
 
 UP,DOWN,LEFT,RIGHT,STAY=0,1,2,3,4
 
@@ -81,7 +84,9 @@ def generation_distance(taille=taille,pourcent_murs=pourcent_murs):
     high_rewards=(monde_distance>15).any()
     return monde_distance,high_rewards
 
-def generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=[20,200],pattern=pattern):
+recompenses=[0.2,1]
+
+def generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=recompenses,pattern=pattern):
     valid=False
     while not valid:
         monde,valid=generation_distance()
@@ -97,10 +102,11 @@ def generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=[20,2
     high_reward,low_reward=more_than_15[np.random.choice(indices_1)],between_5_and_10[np.random.choice(indices_2)]
     for row in range(taille):
         for col in range(taille):
-            if monde[row,col] not in [-1,1]:
-                monde[row,col]=0
+            if monde[row,col] not in [-1,1]: monde[row,col]=0
+            elif monde[row,col]==1: monde[row,col]=-2
             monde[high_reward[0],high_reward[1]]=np.max(recompenses)
             monde[low_reward[0],low_reward[1]]=np.min(recompenses)
+            
     
     #distance from the max reward
     
@@ -125,6 +131,7 @@ def generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=[20,2
         for col in range(taille):
             if optimal_path[row,col]==1 and (row,col) not in pattern.keys():
                 distance_init_optimal[row,col]=distance_initial[row,col]
+    
     monde_valide=False
     
     for case,value in pattern.items() :
@@ -141,25 +148,52 @@ def generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=[20,2
         monde_2[case]=-1
     monde_2[high_reward[0],high_reward[1]]=0
     monde_2[low_reward[0],low_reward[1]]=0
+    for row in range(taille):
+        for col in range(taille):
+            if monde_2[row,col]==-2:
+                monde_2[row,col]=1
     distance_monde_2=distance_etat_initial(monde_2)
     if distance_monde_2[high_reward[0],high_reward[1]] <= distance_initial[high_reward[0],high_reward[1]]+3 : monde_valide=False
-    if not monde_valide : return generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=[20,200],pattern=pattern)
+    if not monde_valide : return generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=recompenses,pattern=pattern)
     return monde
 
-"""exemple=generer_un_monde()
-gridworld=Monde(exemple)
+exemple=generer_un_monde()
+gridworld=Monde(exemple,recompenses)
 pygame.display.flip()
 pygame.time.delay(5000)
-pygame.quit()   """    
+pygame.quit()   
     
 def generer_des_mondes(nombre=20):
     for i in range(nombre):
         monde=generer_un_monde()
         np.save('Mondes/World_'+str(i+1)+'.npy',monde)
-        gridworld=Monde(monde)
+        gridworld=Monde(monde,recompenses)
         pygame.display.flip()
         pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+".png")
         pygame.quit()
+
+def generer_des_mondes_bloques(nombre=20):
+    for i in range(20):
+        world=np.load('Mondes/World_' + str(i+1) +'.npy')
+        for row in range(len(world)):
+            for col in range(len(world)):
+                if (row,col) in pattern.keys():
+                    world[row,col]=-1
+        np.save('Mondes/World_'+str(i+1)+'_B.npy',world)
+        gridworld=Monde(world,recompenses)
+        pygame.display.flip()
+        pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+"_R.png")
+        pygame.quit()
+        for row in range(len(world)):
+            for col in range(len(world)):
+                if world[row][col] not in [-1,-2]: world[row,col]=0
+                if world[row][col]==-2: world[row,col]=1
+        monde_distance=distance_etat_initial(world)
+        gridworld=Monde(monde_distance)
+        pygame.display.flip()
+        pygame.image.save(gridworld.screen,"Mondes/World_"+str(i+1)+"_distance_B.png")
+        pygame.quit()
+                
 
 def incertitude_transition(world):
    walls=[]
@@ -249,8 +283,8 @@ def generer_distance_monde(nombre=20):
         world=np.load('Mondes/World_' + str(i+1) +'.npy')
         for row in range(len(world)):
             for col in range(len(world)):
-                if world[row][col]==20 : world[row][col]=0
-                if world[row][col]==200 : world[row][col]=0
+                if world[row][col] not in [-1,-2]: world[row,col]=0
+                if world[row][col]==-2: world[row,col]=1
         monde_distance=distance_etat_initial(world)
         gridworld=Monde(monde_distance)
         pygame.display.flip()
@@ -272,6 +306,54 @@ def montrer_transition(world_number,action,row,col):
     pygame.image.save(transi.screen,"Mondes/"+str(titre)+'.png')
     pygame.time.delay(3000)
     pygame.quit()
+    
+def convert_from_default(dic):
+    from collections import defaultdict
+    if isinstance(dic,defaultdict):
+        return dict((key,convert_from_default(value)) for key,value in dic.items())
+    else : return dic
+    
+def generer_pattern_incertain(nombre=20):
+    for i in range(nombre):
+        transitions=np.load('Mondes/Transitions_' + str(i+1) +'.npy',allow_pickle=True)
+        for (row,col),value in pattern.items():
+            if value==0:
+                new_transitions=defaultdict(lambda:0.0)
+                for action in range(5):
+                    for key,value in transitions[action][row,col].items():
+                        new_transitions[key]+=value
+                new_transitions=convert_from_default(new_transitions)
+                final_transitions={k:v/5 for k,v in new_transitions.items()}
+                for action in range(5):
+                    transitions[action][row,col]=final_transitions
+        np.save('Mondes/Transitions_'+str(i+1)+'_U.npy',transitions)
+        
+def generer_transitions_bloquees(nombre=20):
+    for i in range(nombre):
+        transitions=np.load('Mondes/Transitions_' + str(i+1) +'.npy',allow_pickle=True)
+        transitions_2=copy.deepcopy(transitions)
+        for row in range(taille):
+            for col in range(taille):
+                for action in range(5):
+                    new_transitions={(row,col):0}
+                    for key,value in transitions[action][row,col].items():
+                        if key in pattern.keys() or key==(row,col):
+                                new_transitions[row,col]+=value
+                        else : new_transitions[key]=value
+                    transitions_2[action][row,col]=new_transitions
+        for (row,col),value in pattern.items():
+                for action in range(5):
+                    transitions_2[action][row,col]={}
+        np.save('Mondes/Transitions_' + str(i+1) +'_B.npy',transitions_2)
+        
+def tout_generer(nombre=20):
+    generer_des_mondes(nombre)
+    generer_des_mondes_incertains(nombre)
+    generer_distance_monde(nombre)
+    generer_pattern_incertain(nombre)
+    generer_transitions_bloquees(nombre)
+    
+###---------------LOPES-----------###       
     
 def transition_Lopes():
         dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
@@ -362,14 +444,29 @@ def transition_Lopes_3():
 
 def non_stat_Lopes():
     transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
-    optimal_path=[(0,0),(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4),(2,4)]
+    optimal_path=[(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4)]
     index_changed=np.random.randint(len(optimal_path))
     state_to_change=optimal_path[index_changed]
     transitions_up=transitions[0][state_to_change]
     for action in range(4):
         transitions[action]=transitions[action+1][state_to_change]
     transitions[4][state_to_change]=transitions_up
+    print(state_to_change)
     np.save('Mondes/Transitions_Lopes_non_stat.npy',transitions)
     
-                
+"""from Useful_functions import value_iteration
+
+def valid_Lopes():
+    valid=False
+    count=0
+    while not valid and count <500: 
+        print(count)
+        transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
+        environment=Lopes_State(transitions)
+        _,policy=value_iteration(environment,0.95,0.01)
+        if policy[0,0]==1 and policy[1,0]==1 and policy[2,0]==1 and policy[3,0]==3 and policy[3,1]==3 and policy[3,2]==3 and policy[3,3]==3 and policy[3,4]==0 and policy[2,4]==4:
+            valid =True
+        else : 
+            count+=1
+            transition_Lopes_2()"""
             

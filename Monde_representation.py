@@ -3,7 +3,7 @@ import pygame
 
 class Monde():
 
-    def __init__(self, grid,screen_size=500,cell_width=44.8, 
+    def __init__(self, grid,recompenses=[],screen_size=500,cell_width=44.8, 
         cell_height=44.8, cell_margin=5):       
         
         pygame.init()
@@ -15,6 +15,7 @@ class Monde():
         self.BLUE = (0, 0, 255)
         self.ORANGE=(255,165,0)
         self.GREEN=(0,255,0)
+        self.PURPLE=(108,2,119)
         self.WIDTH = cell_width
         self.HEIGHT = cell_height
         self.MARGIN = cell_margin
@@ -36,15 +37,21 @@ class Monde():
             for col in range(len(grid[0])):
                 if grid[row,col] == -1:
                     self.color =self.BLACK
-                elif grid[row,col]==1:
+                elif grid[row,col]==-2:
                     self.color = self.BLUE
-                elif grid[row,col]>=6 and grid[row,col]<=10:
-                    self.color=self.ORANGE
-                elif grid[row,col]>15 and grid[row,col]<50:
-                    self.color=self.RED
-                elif grid[row,col]>=50:
-                    self.color=self.GREEN
-                else : self.color=self.WHITE
+                else : self.color= self.WHITE 
+                if len(recompenses)==0 : 
+                    if grid[row,col]==1:
+                        self.color=self.BLUE
+                    if grid[row,col]>=6 and grid[row,col]<=10:
+                        self.color=self.ORANGE
+                    elif grid[row,col]>15 and grid[row,col]<50:
+                        self.color=self.RED
+                else :
+                    max_value=max(recompenses)
+                    if grid[row,col] in recompenses:
+                        if grid[row,col]==max_value:self.color=self.RED
+                        else : self.color=self.ORANGE
                 pygame.draw.rect(self.screen,
 					self.color,
 					[(self.MARGIN + self.WIDTH)*col+self.MARGIN,
@@ -55,9 +62,14 @@ class Monde():
             for col in range(len(grid[0])):
                 y=50*col+12
                 x=50*row+25
-                if grid[row,col] not in [0,1]:
-                    label=self.font.render(str(int(grid[row,col])),1,self.BLACK)
-                    self.screen.blit(label,(y,x))
+                if len(recompenses)>0:
+                    if grid[row,col] not in [0,-2]:
+                        label=self.font.render(str(grid[row,col]),1,self.BLACK)
+                        self.screen.blit(label,(y,x))
+                else : 
+                    if grid[row,col] not in [0,-2]:
+                        label=self.font.render(str(int(grid[row,col])),1,self.BLACK)
+                        self.screen.blit(label,(y,x))
         
         def show(self):
             pygame.display.flip()

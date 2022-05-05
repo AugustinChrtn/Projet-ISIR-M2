@@ -21,14 +21,14 @@ class Uncertain_State:
         for row in range(len(world)):
             for col in range(len(world[0])):
                 if world[row,col]==-1:wall_state.append((row,col))
-                if world[row,col]==1:initial_state.append((row,col))
-                if world[row,col]>2:final_state.append((row,col))
+                if world[row,col]==-2:initial_state.append((row,col))
+                if world[row,col]>0:final_state.append((row,col))
         self.height = len(world)
         self.width = len(world[0])
         self.grid = world       
         self.final_states={}
         for state in final_state:self.final_states[state[0],state[1],STAY]=world[state]
-        self.values= np.array(create_matrix(self.width, self.height,[-1,-1,-1,-1,-1]))  
+        self.values= np.array(create_matrix(self.width, self.height,[-0.01,-0.01,-0.01,-0.01,-0.01]))  
         self.current_location = initial_state[0]    
         self.first_location=initial_state[0]
         for transition, reward in self.final_states.items():

@@ -13,6 +13,10 @@ from Deterministic_world import Deterministic_State
 from Uncertain_world import Uncertain_State
 from Two_step_task import Two_step
 from Lopesworld import Lopes_State
+from Lopes_nonstat import Lopes_nostat
+from Deterministic_nostat import Deterministic_no_stat
+from Uncertainworld_U import Uncertain_State_U
+from Uncertainworld_B import Uncertain_State_B
 
 from Q_learning import Q_Agent
 from Kalman import Kalman_agent
@@ -21,19 +25,29 @@ from Rmax import Rmax_Agent
 from BEB import BEB_Agent
 from KalmanMB import KalmanMB_Agent
 from Q_learningMB import QMB_Agent
-from BEBLP import BEBLP_Agent
-from RmaxLP import RmaxLP_Agent
+from BEBLP2 import BEBLP_Agent
+from RmaxLP2 import RmaxLP_Agent
 
 #Initializing parameters
-environments_parameters={'Two_Step':{},'Lopes':{'transitions':np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)}}
-all_environments={'Lopes':Lopes_State,'Two_Step':Two_step}
+environments_parameters={'Two_Step':{},'Lopes':{'transitions':np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)},
+                         'Lopes_nostat':{'transitions':np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True),'transitions2':np.load('Mondes/Transitions_Lopes_non_stat.npy',allow_pickle=True)}}
+all_environments={'Lopes':Lopes_State,'Two_Step':Two_step,'Lopes_nostat':Lopes_nostat}
 for number_world in range(1,21):
     world=np.load('Mondes/World_'+str(number_world)+'.npy')
+    world_2=np.load('Mondes/World_'+str(number_world)+'_B.npy')
     transitions=np.load('Mondes/Transitions_'+str(number_world)+'.npy',allow_pickle=True)
+    transitions_U=np.load('Mondes/Transitions_'+str(number_world)+'_U.npy',allow_pickle=True)
+    transitions_B=np.load('Mondes/Transitions_'+str(number_world)+'_B.npy',allow_pickle=True)
     environments_parameters["D_{0}".format(number_world)] = {'world':world}
     environments_parameters["U_{0}".format(number_world)] = {'world':world,'transitions':transitions}
+    environments_parameters["DB_{0}".format(number_world)] = {'world':world,'world2':world_2}
+    environments_parameters["UU_{0}".format(number_world)] = {'world':world,'transitions':transitions,'transitions_U':transitions_U}
+    environments_parameters["UB_{0}".format(number_world)] = {'world':world,'world2':world_2,'transitions':transitions,'transitions_B':transitions_B} 
     all_environments["D_{0}".format(number_world)]=Deterministic_State
     all_environments["U_{0}".format(number_world)]=Uncertain_State
+    all_environments["DB_{0}".format(number_world)]=Deterministic_no_stat
+    all_environments["UB_{0}".format(number_world)]=Uncertain_State_B
+    all_environments["UU_{0}".format(number_world)]=Uncertain_State_U
 
 seed=57
 np.random.seed(seed)
@@ -43,26 +57,27 @@ agent_parameters={Q_Agent:{'alpha':0.5,'beta':0.05,'gamma':0.95,'exploration':'s
             Kalman_agent_sum:{'gamma':0.98,'variance_ob':1,'variance_tr':50,'curiosity_factor':1},
             Kalman_agent:{'gamma':0.95, 'variance_ob':1,'variance_tr':40},
             KalmanMB_Agent:{'gamma':0.95,'epsilon':0.1,'H_update':3,'entropy_factor':0.1,'epis_factor':50,'alpha':0.2,'gamma_epis':0.5,'variance_ob':0.02,'variance_tr':0.5},
-            QMB_Agent:{'gamma':0.95,'epsilon':0.1,'optimistic':10,'known_states':True},
-            Rmax_Agent:{'gamma':0.95, 'm':3,'Rmax':1,'known_states':True,'VI':50},
-            BEB_Agent:{'gamma':0.95,'beta':1,'known_states':True,'coeff_prior':3,'informative':True},
-            BEBLP_Agent:{'gamma':0.95,'beta':1,'step_update':10,'coeff_prior':0.1,'alpha':0.3},
-            RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':1,'m':2.3,'VI':50}}
+            QMB_Agent:{'gamma':0.95,'epsilon':0.1,'optimistic':20,'known_states':True},
+            Rmax_Agent:{'gamma':0.95, 'm':7,'Rmax':1,'known_states':True,'VI':50},
+            BEB_Agent:{'gamma':0.95,'beta':2,'known_states':True,'coeff_prior':40,'informative':True},
+            BEBLP_Agent:{'gamma':0.95,'beta':1.5,'step_update':10,'coeff_prior':0.001,'alpha':0.3},
+            RmaxLP_Agent:{'gamma':0.95,'Rmax':1.5,'step_update':10,'alpha':0.3,'m':0.9,'VI':50}}
 
 
 nb_iters=1
-trials = 500
-max_step = 30
-photos=[10,30,50,100,199,300,499]
-screen=1
+trials = 300
+max_step =30
+photos=[10,40,70,100,130,160,199]
+screen=0
 accuracy=0.05
+pas_VI=50
 
 #agents={'RA':Rmax_Agent,'BEB':BEB_Agent,'QMB':QMB_Agent,'BEBLP':BEBLP_Agent,'RALP':RmaxLP_Agent,'QA':Q_Agent,'KAS':Kalman_agent_sum,'KMB':KalmanMB_Agent}
-agents={'BEB':BEB_Agent,'QMB':QMB_Agent}
+agents={'RALP':RmaxLP_Agent}
 
 #environments=['Lopes_{0}'.format(num) for num in range(1,21),'Two_Step']+['D_{0}'.format(num) for num in range(1,21)]+['U_{0}'.format(num) for num in range(1,21)]
 
-names_env=['Lopes']
+names_env=['Lopes_nostat']
 
 rewards={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
 steps={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
@@ -74,7 +89,7 @@ for name_environment in names_env:
     for iteration in range(nb_iters):
         print(iteration)
         for name_agent,agent in agents.items(): 
-            
+            print(name_agent)
             environment=all_environments[name_environment](**environments_parameters[name_environment])
             
             globals()[name_agent]=agent(environment,**agent_parameters[agent]) #Defining a new agent from the dictionary agents
@@ -136,26 +151,28 @@ for name_agent in agents.keys():
     plt.title(name_agent)
     plt.show()
 
+    
+
+
 plt.figure()
 for name_agent in agents.keys():
-    plt.plot([100*i for i in range(min_length)],mean_pol_error_agent[name_agent],label=name_agent)
+    plt.plot([pas_VI*i for i in range(min_length)],mean_pol_error_agent[name_agent],label=name_agent)
 plt.xlabel("Steps")
 plt.ylabel("Policy value error")
 plt.legend()
 plt.show()
 
 
-
 pygame.quit()
 
 
 ### Save results ###
-"""
+
 results={'seed':seed,'nb_iters':nb_iters,'trials':trials,'max_step':max_step,'agent_parameters':agent_parameters,'agents':agents,'environments':names_env,'rewards':rewards,'step_number':step_number,'pol_error':pol_error}
 
 temps=str(round(time.time()))
 save_pickle(results,'Results/'+temps+'.pickle')
-test=open_pickle('Results/'+temps+'.pickle')"""
+#test=open_pickle('Results/'+temps+'.pickle')
 
 
 

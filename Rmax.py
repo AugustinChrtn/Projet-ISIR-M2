@@ -73,4 +73,5 @@ class Rmax_Agent:
                 self.tSAS[state_1][action][state_1]=1
                 self.R[state_1][action]=self.Rmax
                 self.Q[state_1][action]=self.Rmax/(1-self.gamma)
-                self.max_visits[state_1][action]=np.exp(self.environment.entropy[state_1,action])*self.m
+                self.max_visits[state_1][action]=self.m
+                #self.max_visits[state_1][action]=np.exp(self.environment.entropy[state_1,action])*self.m
