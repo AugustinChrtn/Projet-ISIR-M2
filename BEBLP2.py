@@ -1,6 +1,5 @@
 import numpy as np
 from collections import defaultdict
-import copy
 
 def count_to_dirichlet(dictionnaire):
     keys,values=[],[]
