@@ -73,7 +73,7 @@ class RmaxLP_Agent:
         number_states=len(self.states)
         for state_1 in self.states:
             for action in self.environment.actions:
-                self.tSAS[state_1][action]=1
+                self.tSAS[state_1][action][state_1]=1
                 self.R[state_1][action]=self.Rmax
                 self.Q[state_1][action]=self.Rmax/(1-self.gamma)
                 self.CV[state_1][action]=np.log(number_states)

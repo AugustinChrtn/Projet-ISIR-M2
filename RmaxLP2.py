@@ -70,12 +70,13 @@ class RmaxLP_Agent:
                         new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
                         old_CV,old_variance=self.cross_validation(new_dict)
                         self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
-                        
-                        for j in range(3): #cf formule logarithme Strehl 2009 PAC Analysis
-                            for state_known in self.nSAS.keys():
-                                for action_known in self.nSAS[state_known].keys():
-                                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-                        
+                    
+                    for i in range(5):
+                        for state_known in self.nSAS.keys():
+                            for action_known in self.nSAS[state_known].keys():
+                                self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+                    
+  
     def choose_action(self):
         self.step_counter+=1
         state=self.environment.current_location
@@ -89,7 +90,7 @@ class RmaxLP_Agent:
         number_states=len(self.states)
         for state_1 in self.states:
             for action in self.environment.actions:
-                self.tSAS[state_1][action]=1
+                self.tSAS[state_1][action][state_1]=1
                 self.R[state_1][action]=self.Rmax
                 self.Q[state_1][action]=self.Rmax/(1-self.gamma)
                 self.LP[state_1][action]=np.log(number_states)

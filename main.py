@@ -61,7 +61,7 @@ agent_parameters={Q_Agent:{'alpha':0.5,'beta':0.05,'gamma':0.95,'exploration':'s
             Rmax_Agent:{'gamma':0.95, 'm':7,'Rmax':1,'known_states':True,'VI':50},
             BEB_Agent:{'gamma':0.95,'beta':2,'known_states':True,'coeff_prior':40,'informative':True},
             BEBLP_Agent:{'gamma':0.95,'beta':1.5,'step_update':10,'coeff_prior':0.001,'alpha':0.3},
-            RmaxLP_Agent:{'gamma':0.95,'Rmax':1.5,'step_update':10,'alpha':0.3,'m':0.9,'VI':50}}
+            RmaxLP_Agent:{'gamma':0.95,'Rmax':3,'step_update':10,'alpha':0.3,'m':0.5,'VI':50}}
 
 
 nb_iters=1
