@@ -445,7 +445,7 @@ def transition_Lopes_3():
 def non_stat_Lopes(nombre=20):
     for i in range(nombre):
         transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
-        optimal_path=[(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4)]
+        optimal_path=[(0,0),(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4),(2,4)]
         index_changed=np.random.randint(len(optimal_path))
         state_to_change=optimal_path[index_changed]
         liste_rotation=[j for j in range(5)]

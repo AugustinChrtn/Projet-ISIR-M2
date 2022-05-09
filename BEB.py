@@ -57,13 +57,13 @@ class BEB_Agent:
                     
                     #Ajout du bonus qui dépend du nombre de passages
                     self.bonus[old_state][action]=self.beta/(1+self.nSA[old_state][action])
-                    
+                    """a corriger"""
                     if self.nSA[old_state][action]==4:
                         self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
                         self.known_state_action.append((old_state,action))
-                        for i in range(30):
-                            for state_known,action_known in self.known_state_action:
-                                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+                    for i in range(5):
+                        for state_known,action_known in self.known_state_action:
+                            self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
                    
                     """if self.step_counter%200==10:
                         for i in range(10):

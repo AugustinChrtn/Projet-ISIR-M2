@@ -75,7 +75,7 @@ accuracy=0.05
 pas_VI=50
 
 #agents={'RA':Rmax_Agent,'BEB':BEB_Agent,'QMB':QMB_Agent,'BEBLP':BEBLP_Agent,'RALP':RmaxLP_Agent,'QA':Q_Agent,'KAS':Kalman_agent_sum,'KMB':KalmanMB_Agent}
-agents={'BEBLP':BEBLP_Agent,'BEB':BEB_Agent}
+agents={'BEB':BEB_Agent}
 
 #environments=['Lopes_nostat_{0}'.format(num) for num in range(1,21),'Two_Step']+['D_{0}'.format(num) for num in range(1,21)]+['U_{0}'.format(num) for num in range(1,21)]
 
