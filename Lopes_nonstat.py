@@ -54,11 +54,14 @@ class Lopes_nostat():
         self.entropy={(state,action) : entropy(transitions[action][state]) for state in self.states for action in self.actions }   
         self.number_steps=0
         self.changed=False
+    
     def make_step(self, action):
         self.number_steps+=1
         if self.number_steps==900:
-            self.change_dynamics()
+            number_steps=self.number_steps
+            self.__init__(self.transitions2,self.transitions)
             self.changed=True
+            self.number_steps=number_steps
         last_location = self.current_location       
         reward = self.values[last_location[0]][last_location[1]][action]
         if action == UP:
@@ -73,12 +76,3 @@ class Lopes_nostat():
             self.current_location = choice_dictionary(self.STAY[last_location[0]][last_location[1]])
         return reward, (last_location[0],last_location[1],action) in self.final_states.keys()
     
-    def change_dynamics(self):
-        self.transitions=self.transitions2
-        self.UP=self.transitions[UP]
-        self.DOWN=self.transitions[DOWN]
-        self.LEFT=self.transitions[LEFT]
-        self.RIGHT=self.transitions[RIGHT]
-        self.STAY=self.transitions[STAY]
-        self.entropy={(state,action) : entropy(self.transitions[action][state]) for state in self.states for action in self.actions } 
-        
