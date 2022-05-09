@@ -452,8 +452,8 @@ def non_stat_Lopes(nombre=20):
         valid=False
         while not valid:
             valid=True
-            for i in range(5):
-                if liste_rotation[i]==i:
+            for k in range(5):
+                if liste_rotation[k]==k:
                     valid=False
                     random.shuffle(liste_rotation)
                     break
@@ -462,7 +462,6 @@ def non_stat_Lopes(nombre=20):
             transitions[action][state_to_change[0]][state_to_change[1]]=new_transitions[action]
         print(state_to_change)
         np.save('Mondes/Transitions_Lopes_non_stat'+str(i+1)+'.npy',transitions)
-        return transitions
     
 """from Useful_functions import value_iteration
 

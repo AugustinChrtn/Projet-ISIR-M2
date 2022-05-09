@@ -376,7 +376,7 @@ def get_policy(agent):
 
 ##Optimal policies ###
 
-def compute_optimal_policies(environments_parameters):
+def compute_optimal_policies(environments_parameters=environments_parameters):
     for name_environment in all_environments.keys():
         environment=all_environments[name_environment](**environments_parameters[name_environment])
         for number_world in range(1,21):
