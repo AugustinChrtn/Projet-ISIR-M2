@@ -61,6 +61,7 @@ class Uncertain_State_U:
                     self.states.append((i,j))
         self.number_steps=0
         self.changed=False
+        self.uncertain_states=[]
         
     def make_step(self, action):
         self.number_steps+=1

@@ -70,7 +70,7 @@ class Deterministic_no_stat:
         self.max_exploration=len(self.actions)*(self.height*self.width-len(self.walls))
         self.number_steps=0
         self.changed=False
-        
+        self.uncertain_states=[]
         
     def make_step(self, action):
         self.number_steps+=1

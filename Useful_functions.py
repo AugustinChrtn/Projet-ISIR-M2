@@ -15,6 +15,10 @@ from Deterministic_world import Deterministic_State
 from Uncertain_world import Uncertain_State
 from Lopesworld import Lopes_State
 from Two_step_task import Two_step
+from Lopes_nonstat import Lopes_nostat
+from Deterministic_nostat import Deterministic_no_stat
+from Uncertainworld_U import Uncertain_State_U
+from Uncertainworld_B import Uncertain_State_B
 
 from Q_learning import Q_Agent
 from Kalman import Kalman_agent
@@ -67,11 +71,23 @@ environments_parameters={'Two_Step':{},'Lopes':{'transitions':np.load('Mondes/Tr
 all_environments={'Lopes':Lopes_State,'Two_Step':Two_step}
 for number_world in range(1,21):
     world=np.load('Mondes/World_'+str(number_world)+'.npy')
+    world_2=np.load('Mondes/World_'+str(number_world)+'_B.npy')
     transitions=np.load('Mondes/Transitions_'+str(number_world)+'.npy',allow_pickle=True)
+    transitions_U=np.load('Mondes/Transitions_'+str(number_world)+'_U.npy',allow_pickle=True)
+    transitions_B=np.load('Mondes/Transitions_'+str(number_world)+'_B.npy',allow_pickle=True)
+    transitions_lopes=np.load('Mondes/Transitions_Lopes_non_stat'+str(number_world)+'.npy',allow_pickle=True)
     environments_parameters["D_{0}".format(number_world)] = {'world':world}
     environments_parameters["U_{0}".format(number_world)] = {'world':world,'transitions':transitions}
+    environments_parameters["DB_{0}".format(number_world)] = {'world':world,'world2':world_2}
+    environments_parameters["UU_{0}".format(number_world)] = {'world':world,'transitions':transitions,'transitions_U':transitions_U}
+    environments_parameters["UB_{0}".format(number_world)] = {'world':world,'world2':world_2,'transitions':transitions,'transitions_B':transitions_B} 
+    environments_parameters["Lopes_nostat_{0}".format(number_world)]={'transitions':np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True),'transitions2':transitions_lopes}
     all_environments["D_{0}".format(number_world)]=Deterministic_State
     all_environments["U_{0}".format(number_world)]=Uncertain_State
+    all_environments["DB_{0}".format(number_world)]=Deterministic_no_stat
+    all_environments["UB_{0}".format(number_world)]=Uncertain_State_B
+    all_environments["UU_{0}".format(number_world)]=Uncertain_State_U
+    all_environments["Lopes_nostat_{0}".format(number_world)]=Lopes_nostat
 
 
 ### PICTURES ###
@@ -331,8 +347,8 @@ def plot_VI(environment,gamma,accuracy): #only in gridworlds
     cell_height = 45
     cell_margin = 5
     gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.final_states,init_loc,V_2,action)
-    pygame.image.save(gridworld.screen,"Images/VI_"+type(environment).__name__+"_"+str(gamma)+".png")
-
+    #pygame.image.save(gridworld.screen,"Images/Optimal policy/VI_"+type(environment).__name__+".png")
+    return gridworld
 
 def policy_evaluation(environment,policy,gamma,accuracy):
     V={state:1 for state in environment.states}
@@ -358,7 +374,16 @@ def get_policy(agent):
         action_every_state[state]=best_action 
     return action_every_state
 
+##Optimal policies ###
 
+def compute_optimal_policies():
+    for name_environment in all_environments.keys():
+        environment=all_environments[name_environment](**environments_parameters[name_environment])
+        if type(environment).__name__ !='Two_step':
+            gridworld=plot_VI(environment,gamma=0.95,accuracy=0.001)
+            pygame.image.save(gridworld.screen,"Images/Optimal policy/VI_"+name_environment+".png")
+
+### Parametter fitting ##
 
 environment_names=['Lopes']
 betas=[i for i in range(1,2)]

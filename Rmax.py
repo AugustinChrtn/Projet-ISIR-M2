@@ -4,7 +4,7 @@ from collections import defaultdict
 
 class Rmax_Agent:
 
-    def __init__(self,environment, gamma=0.95, m=5,Rmax=200,known_states=True,VI=150):
+    def __init__(self,environment, gamma=0.95, m=5,Rmax=200,known_states=True,VI=50):
         
         self.Rmax=Rmax
         
@@ -74,4 +74,5 @@ class Rmax_Agent:
                 self.R[state_1][action]=self.Rmax
                 self.Q[state_1][action]=self.Rmax/(1-self.gamma)
                 self.max_visits[state_1][action]=self.m
-                #self.max_visits[state_1][action]=np.exp(self.environment.entropy[state_1,action])*self.m
+        for state in self.environment.uncertain_states:
+                self.max_visits[state][action]=2*self.m

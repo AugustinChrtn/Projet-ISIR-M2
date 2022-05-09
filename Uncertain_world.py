@@ -43,6 +43,7 @@ class Uncertain_State:
         self.LEFT=transitions[LEFT]
         self.RIGHT=transitions[RIGHT]
         self.STAY=[list({} for i in range(self.width))for i in range(self.height)]
+        self.uncertain_states=[]
         
         for row in range(self.height):
             for col in range(self.width):

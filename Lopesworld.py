@@ -12,12 +12,6 @@ def choice_dictionary(dictionary):
     values = list(dictionary.values())
     return random.choices(keys, weights=values)[0]
 
-def entropy(transitions):
-    value_entropy=0
-    for value in transitions.values():
-        if value>0:
-            value_entropy+=-value*np.log2(value)
-    return value_entropy
 
 
 class Lopes_State():
@@ -50,7 +44,6 @@ class Lopes_State():
         self.states=[(i,j) for i in range(self.height) for j in range(self.width)]
         self.transitions=transitions
         self.uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
-        self.entropy={(state,action) : entropy(transitions[action][state]) for state in self.states for action in self.actions }   
     
     def make_step(self, action):
         last_location = self.current_location       

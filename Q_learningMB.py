@@ -4,7 +4,7 @@ from collections import defaultdict
 
 class QMB_Agent:
 
-    def __init__(self,environment, gamma=0.95,epsilon = 0.1,optimistic=10,known_states=True):
+    def __init__(self,environment, gamma=0.95,epsilon = 0.1,known_states=True):
         
         self.environment=environment
         self.gamma = gamma
@@ -22,7 +22,6 @@ class QMB_Agent:
         self.counter=self.nSA
         self.step_counter=0
         
-        self.optimistic=optimistic
         
         if known_states : self.ajout_states()
 
@@ -42,7 +41,7 @@ class QMB_Agent:
 
                     #self.Q[old_state][action]=self.R[old_state][action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[old_state][action][next_state] for next_state in self.tSAS[old_state][action].keys()])
                     
-                    if self.step_counter%40==0:
+                    if self.step_counter%10==0:
                         for i in range(20):
                             for visited_state in self.nSA.keys():
                                 for taken_action in self.nSA[visited_state].keys():
@@ -66,7 +65,7 @@ class QMB_Agent:
         known_states=self.Q.keys()
         if state not in known_states:
             for action in self.environment.actions:
-                self.Q[state][action]=1/(1-self.gamma   )
+                self.Q[state][action]=1/(1-self.gamma)
     
     def ajout_states(self):
         self.states=self.environment.states
@@ -75,4 +74,4 @@ class QMB_Agent:
             for action in self.environment.actions:
                 for state_2 in self.states:
                     self.tSAS[state_1][action][state_2]=1/number_states
-                self.Q[state_1][action]=self.optimistic
+                self.Q[state_1][action]=1/(1-self.gamma)

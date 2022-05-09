@@ -12,13 +12,6 @@ def choice_dictionary(dictionary):
     values = list(dictionary.values())
     return random.choices(keys, weights=values)[0]
 
-def entropy(transitions):
-    value_entropy=0
-    for value in transitions.values():
-        if value>0:
-            value_entropy+=-value*np.log2(value)
-    return value_entropy
-
 
 class Lopes_nostat():
     def __init__(self,transitions,transitions2):
@@ -31,7 +24,7 @@ class Lopes_nostat():
         self.first_location=(0,0)
         
         self.actions = [UP, DOWN, LEFT, RIGHT,STAY]
-        malus=-1
+        malus=-0.1
         self.rewards={(1,1,UP):malus,(1,1,LEFT):malus,(1,1,RIGHT):malus,(1,1,DOWN):malus,(1,1,STAY):malus,(2,4,STAY):1,
                       (1,2,UP):malus,(1,2,LEFT):malus,(1,2,RIGHT):malus,(1,2,DOWN):malus,(1,2,STAY):malus,
                       (1,3,UP):malus,(1,3,LEFT):malus,(1,3,RIGHT):malus,(1,3,DOWN):malus,(1,3,STAY):malus,
@@ -51,7 +44,7 @@ class Lopes_nostat():
         self.transitions=transitions
         self.transitions2=transitions2
         self.uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
-        self.entropy={(state,action) : entropy(transitions[action][state]) for state in self.states for action in self.actions }   
+
         self.number_steps=0
         self.changed=False
     

@@ -25,8 +25,7 @@ class BEBLP_Agent:
         
         self.nSA = defaultdict(lambda: defaultdict(lambda: 0)) #Compteur passage (état,action)
         self.nSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0))) #Compteur (état_1,action,état_2)
-
-        
+        self.last_k=defaultdict(lambda: defaultdict(lambda: [(0,0)]*self.step_update))
         self.Q = defaultdict(lambda: defaultdict(lambda: 0.0)) #Q-valeur état-action
         self.bonus=defaultdict(lambda: defaultdict(lambda: 0.0))
         
@@ -39,7 +38,6 @@ class BEBLP_Agent:
         self.nSAS_old = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
         
         self.LP=defaultdict(lambda: defaultdict(lambda: 0.0))
-        self.CV=defaultdict(lambda: defaultdict(lambda: 0.0))
         self.step_update=step_update
         self.alpha=alpha
         
@@ -57,7 +55,7 @@ class BEBLP_Agent:
         
         #Modifier les probabilités de transition selon le prior avec distribution de dirichlet
         self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
-        
+        self.last_k[old_state][action][self.nSA[old_state][action]%self.step_update]=new_state
         #Ajout du bonus qui dépend du nombre de passages
         #self.Q[old_state][action]=self.R[old_state][action]+self.bonus[old_state][action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[old_state][action][next_state] for next_state in self.tSAS[old_state][action].keys()])
         """
@@ -78,11 +76,19 @@ class BEBLP_Agent:
                     for action_known in self.nSAS[state_known].keys():
                         self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
         """
-        if self.nSA[old_state][action]%self.step_update==3:                    
-            new_CV,new_variance=self.cross_validation(self.prior[old_state][action],self.nSAS[old_state][action])
-            self.LP[old_state][action]=max(self.CV[old_state][action]-new_CV+self.alpha*np.sqrt(new_variance),0.001)
-            self.CV[old_state][action]=new_CV
+        if self.nSA[old_state][action]>self.step_update:
+            new_dict={}
+            for k,v in self.nSAS[old_state][action].items():
+                new_dict[k]=v
+            for last_seen_state in self.last_k[old_state][action]:
+                new_dict[last_seen_state]-=1
+                if new_dict[last_seen_state]==0:
+                    del new_dict[last_seen_state]
+            new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
+            old_CV,old_variance=self.cross_validation(new_dict)
+            self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
             self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
+        
         for i in range(5):
             for state_known in self.nSAS.keys():
                 for action_known in self.nSAS[state_known].keys():
@@ -118,10 +124,9 @@ class BEBLP_Agent:
                     self.prior[state_1][action][state_2]=self.coeff_prior
                 self.bonus[state_1][action]=self.beta
                 self.Q[state_1][action]=(1+self.beta)/(1-self.gamma)
-                self.CV[state_1][action]=np.log(number_states)
                 self.LP[state_1][action]=np.log(number_states)
                 
-    def cross_validation(self,prior,nSAS_SA): 
+    def cross_validation(self,nSAS_SA): 
         """cv,v=0,[]
         for key,value in nSAS_SA.items():
             for i in range(value):

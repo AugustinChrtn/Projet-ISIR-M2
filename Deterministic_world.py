@@ -61,7 +61,7 @@ class Deterministic_State:
                     self.states.append((i,j))
         self.transitions=np.array([self.UP,self.DOWN,self.LEFT,self.RIGHT,self.STAY])
         self.max_exploration=len(self.actions)*(self.height*self.width-len(self.walls))
-    
+        self.uncertain_states=[]
     def make_step(self, action):
         last_location = self.current_location       
         reward = self.values[last_location[0]][last_location[1]][action]

@@ -62,7 +62,7 @@ class Uncertain_State_B:
                     self.states.append((i,j))
         self.number_steps=0
         self.changed=False
-        
+        self.uncertain_states=[]
     def make_step(self, action):
         self.number_steps+=1
         if self.number_steps>5000 and not self.changed and self.current_location==self.first_location :

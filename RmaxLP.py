@@ -16,6 +16,7 @@ class RmaxLP_Agent:
         
         self.nSA = defaultdict(lambda: defaultdict(lambda: 0))
         self.nSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0)))
+        self.last_k=defaultdict(lambda: defaultdict(lambda: [(0,0)]*self.step_update))
         
         self.tSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
         
@@ -25,19 +26,22 @@ class RmaxLP_Agent:
         self.step_counter=0
         
         self.LP=defaultdict(lambda: defaultdict(lambda: 0.0))
-        self.CV=defaultdict(lambda: defaultdict(lambda: 0.0))
+
         self.step_update=step_update
         self.alpha=alpha
         self.m=m
         self.VI=VI
         self.known_state_action=[]
         self.ajout_states()
+        
     def learn(self,old_state,reward,new_state,action):
                     
                     
                     self.nSA[old_state][action] +=1
                     self.Rsum[old_state][action] += reward
                     self.nSAS[old_state][action][new_state] += 1
+                    self.last_k[old_state][action][self.nSA[old_state][action]%self.step_update]=new_state
+                    
                     
                     if self.LP[old_state][action] < self.m :
                         if (old_state,action) not in self.known_state_action :
@@ -54,12 +58,25 @@ class RmaxLP_Agent:
                         self.R[old_state][action]=self.Rmax      
                         if (old_state,action) in self.known_state_action: self.known_state_action.remove((old_state,action))
                     
-                    if self.nSA[old_state][action]%self.step_update==3:                    
+                    
+                    if self.nSA[old_state][action]>self.step_update:
+                        new_dict={}
+                        for k,v in self.nSAS[old_state][action].items():
+                            new_dict[k]=v
+                        for last_seen_state in self.last_k[old_state][action]:
+                            new_dict[last_seen_state]-=1
+                            if new_dict[last_seen_state]==0:
+                                del new_dict[last_seen_state]
                         new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
-                        self.LP[old_state][action]=self.CV[old_state][action]-new_CV+self.alpha*np.sqrt(new_variance)
-                        self.CV[old_state][action]=new_CV
-                        
-                        
+                        old_CV,old_variance=self.cross_validation(new_dict)
+                        self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
+                    
+                    for i in range(5):
+                        for state_known in self.nSAS.keys():
+                            for action_known in self.nSAS[state_known].keys():
+                                self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+                    
+  
     def choose_action(self):
         self.step_counter+=1
         state=self.environment.current_location
@@ -76,9 +93,7 @@ class RmaxLP_Agent:
                 self.tSAS[state_1][action][state_1]=1
                 self.R[state_1][action]=self.Rmax
                 self.Q[state_1][action]=self.Rmax/(1-self.gamma)
-                self.CV[state_1][action]=np.log(number_states)
                 self.LP[state_1][action]=np.log(number_states)
-                #self.LP[state_1][action]=np.log(number_states)
     
     def cross_validation(self,nSAS_SA):
         cv,v=0,[]
