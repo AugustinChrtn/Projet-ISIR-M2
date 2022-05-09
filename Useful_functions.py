@@ -376,9 +376,20 @@ def get_policy(agent):
 
 ##Optimal policies ###
 
-def compute_optimal_policies():
+def compute_optimal_policies(environments_parameters):
     for name_environment in all_environments.keys():
         environment=all_environments[name_environment](**environments_parameters[name_environment])
+        for number_world in range(1,21):
+            world=np.load('Mondes/World_'+str(number_world)+'.npy')
+            world_2=np.load('Mondes/World_'+str(number_world)+'_B.npy')
+            transitions=np.load('Mondes/Transitions_'+str(number_world)+'.npy',allow_pickle=True)
+            transitions_U=np.load('Mondes/Transitions_'+str(number_world)+'_U.npy',allow_pickle=True)
+            transitions_B=np.load('Mondes/Transitions_'+str(number_world)+'_B.npy',allow_pickle=True)
+            transitions_lopes=np.load('Mondes/Transitions_Lopes_non_stat'+str(number_world)+'.npy',allow_pickle=True)
+            environments_parameters["DB_{0}".format(number_world)] = {'world':world_2,'world2':world}
+            environments_parameters["UU_{0}".format(number_world)] = {'world':world,'transitions':transitions_U,'transitions_U':transitions}
+            environments_parameters["UB_{0}".format(number_world)] = {'world':world_2,'world2':world,'transitions':transitions_B,'transitions_B':transitions} 
+            environments_parameters["Lopes_nostat_{0}".format(number_world)]={'transitions':transitions_lopes,'transitions2':transitions}
         if type(environment).__name__ !='Two_step':
             gridworld=plot_VI(environment,gamma=0.95,accuracy=0.001)
             pygame.image.save(gridworld.screen,"Images/Optimal policy/VI_"+name_environment+".png")

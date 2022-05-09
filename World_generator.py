@@ -160,7 +160,7 @@ def generer_un_monde(taille=taille,pourcent_murs=pourcent_murs,recompenses=recom
 exemple=generer_un_monde()
 gridworld=Monde(exemple,recompenses)
 pygame.display.flip()
-pygame.time.delay(5000)
+pygame.time.delay(1000)
 pygame.quit()   
     
 def generer_des_mondes(nombre=20):
@@ -304,7 +304,7 @@ def montrer_transition(world_number,action,row,col):
     transi=Transition((row,col),titre,transition,walls,action)
     pygame.display.flip()
     pygame.image.save(transi.screen,"Mondes/"+str(titre)+'.png')
-    pygame.time.delay(3000)
+    pygame.time.delay(5000)
     pygame.quit()
     
 def convert_from_default(dic):
@@ -448,12 +448,21 @@ def non_stat_Lopes(nombre=20):
         optimal_path=[(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4)]
         index_changed=np.random.randint(len(optimal_path))
         state_to_change=optimal_path[index_changed]
-        transitions_up=transitions[0][state_to_change]
-        for action in range(4):
-            transitions[action]=transitions[action+1][state_to_change]
-        transitions[4][state_to_change]=transitions_up
+        liste_rotation=[j for j in range(5)]
+        valid=False
+        while not valid:
+            valid=True
+            for i in range(5):
+                if liste_rotation[i]==i:
+                    valid=False
+                    random.shuffle(liste_rotation)
+                    break
+        new_transitions=[transitions[rotation][state_to_change[0]][state_to_change[1]] for rotation in liste_rotation]
+        for action in range(5):
+            transitions[action][state_to_change[0]][state_to_change[1]]=new_transitions[action]
         print(state_to_change)
         np.save('Mondes/Transitions_Lopes_non_stat'+str(i+1)+'.npy',transitions)
+        return transitions
     
 """from Useful_functions import value_iteration
 
