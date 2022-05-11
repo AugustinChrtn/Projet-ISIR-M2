@@ -89,10 +89,10 @@ class BEBLP_Agent:
             self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
             self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
         
-        for i in range(5):
-            for state_known in self.nSAS.keys():
-                for action_known in self.nSAS[state_known].keys():
-                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+            for i in range(5):
+                for state_known in self.nSAS.keys():
+                    for action_known in self.nSAS[state_known].keys():
+                        self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
             
             """if self.LP[old_state][action]<2:
                 if(old_state,action) not in self.known_state_action:
