@@ -33,6 +33,7 @@ class BEBLP_Agent:
         self.step_counter=0
         
         self.prior= defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
+        self.prior_0=defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
         
         self.tSAS_old=defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
         self.nSAS_old = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
@@ -51,7 +52,7 @@ class BEBLP_Agent:
         self.Rsum[old_state][action] += reward
         self.nSAS[old_state][action][new_state] += 1
         self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action]
-        self.prior[old_state][action][new_state]+=1
+        self.prior[old_state][action][new_state]+=1  
         
         #Modifier les probabilités de transition selon le prior avec distribution de dirichlet
         self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
@@ -89,10 +90,10 @@ class BEBLP_Agent:
             self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
             self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
         
-            for i in range(5):
-                for state_known in self.nSAS.keys():
-                    for action_known in self.nSAS[state_known].keys():
-                        self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+        for i in range(5):
+            for state_known in self.nSAS.keys():
+                for action_known in self.nSAS[state_known].keys():
+                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
             
             """if self.LP[old_state][action]<2:
                 if(old_state,action) not in self.known_state_action:

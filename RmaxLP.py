@@ -41,14 +41,15 @@ class RmaxLP_Agent:
                     self.Rsum[old_state][action] += reward
                     self.nSAS[old_state][action][new_state] += 1
                     self.last_k[old_state][action][self.nSA[old_state][action]%self.step_update]=new_state
-                    
+                    self.tSAS[old_state][action]=defaultdict(lambda:.0)                      
+                    for next_state in self.nSAS[old_state][action].keys():
+                        self.tSAS[old_state][action][next_state] = self.nSAS[old_state][action][next_state]/self.nSA[old_state][action]
                     
                     if self.LP[old_state][action] < self.m :
                         if (old_state,action) not in self.known_state_action :
                             self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action] 
                             self.known_state_action.append((old_state,action))
-                            self.tSAS[old_state][action]=defaultdict(lambda:.0)
-                            self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action]                         
+                            self.tSAS[old_state][action]=defaultdict(lambda:.0)                      
                             for next_state in self.nSAS[old_state][action].keys():
                                 self.tSAS[old_state][action][next_state] = self.nSAS[old_state][action][next_state]/self.nSA[old_state][action]
                             for j in range(self.VI): #cf formule logarithme Strehl 2009 PAC Analysis
@@ -72,10 +73,9 @@ class RmaxLP_Agent:
                         self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
                     
                     for i in range(5):
-                        for state_known in self.nSAS.keys():
-                            for action_known in self.nSAS[state_known].keys():
+                        for state_known in self.nSA.keys():
+                            for action_known in self.nSA[state_known].keys():
                                 self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-                    
   
     def choose_action(self):
         self.step_counter+=1

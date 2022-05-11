@@ -24,7 +24,7 @@ from Kalman_sum import Kalman_agent_sum
 from Rmax import Rmax_Agent
 from BEB import BEB_Agent
 from KalmanMB import KalmanMB_Agent
-from Q_learningMB import QMB_Agent
+from greedyMB import QMB_Agent
 from BEBLP import BEBLP_Agent
 from RmaxLP import RmaxLP_Agent
 
@@ -61,25 +61,25 @@ agent_parameters={Q_Agent:{'alpha':0.5,'beta':0.05,'gamma':0.95,'exploration':'s
             KalmanMB_Agent:{'gamma':0.95,'epsilon':0.1,'H_update':3,'entropy_factor':0.1,'epis_factor':50,'alpha':0.2,'gamma_epis':0.5,'variance_ob':0.02,'variance_tr':0.5},
             QMB_Agent:{'gamma':0.95,'epsilon':0.1,'known_states':True},
             Rmax_Agent:{'gamma':0.95, 'm':8,'Rmax':1,'known_states':True,'VI':50},
-            BEB_Agent:{'gamma':0.95,'beta':2,'known_states':True,'coeff_prior':40,'informative':True},
-            BEBLP_Agent:{'gamma':0.95,'beta':2,'step_update':10,'coeff_prior':0.001,'alpha':0.3},
-            RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':0.3,'m':0.9,'VI':50}}
+            BEB_Agent:{'gamma':0.95,'beta':5,'known_states':True,'coeff_prior':1,'informative':True},
+            BEBLP_Agent:{'gamma':0.95,'beta':1,'step_update':10,'coeff_prior':0.001,'alpha':0.3},
+            RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':0.2,'m':0.9,'VI':50}}
 
 
 nb_iters=1
-trials = 300
-max_step =50
+trials = 250
+max_step =30
 photos=[10,40,70,100,130,160,199]
 screen=0
 accuracy=0.05
 pas_VI=50
 
 #agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent,'QA':Q_Agent,'KAS':Kalman_agent_sum,'KMB':KalmanMB_Agent}
-agents={'BEBLP':BEBLP_Agent}
+agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent}
 
 #environments=['Lopes_nostat_{0}'.format(num) for num in range(1,21),'Two_Step']+['D_{0}'.format(num) for num in range(1,21)]+['U_{0}'.format(num) for num in range(1,21)]
 
-names_env=['Lopes_nostat_{0}'.format(num) for num in range(1,21)]
+names_env=['Lopes_nostat_{0}'.format(num) for num in range(1,11)]
 
 rewards={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
 steps={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
@@ -137,7 +137,7 @@ print("")
 for name_agent in agents.keys():
     print(name_agent+' : '+ 'avg_reward= '+str(round(mean_reward_agent[name_agent],2))+", trial_conv= "+str(stats_agent[name_agent][0])+
           ', step_conv= '+str(round(step_plateau_agent[name_agent]))+
-          ', mean= '+str(round(stats_agent[name_agent][1]))+', var= '+str(round(stats_agent[name_agent][2]))+', explo= '+str(round(mean_exploration_agent[name_agent],3)))
+          ', mean= '+str(round(stats_agent[name_agent][1],2))+', var= '+str(round(stats_agent[name_agent][2],2))+', explo= '+str(round(mean_exploration_agent[name_agent],2)))
     print("")
 
 
@@ -173,7 +173,7 @@ for name_agent in agents.keys():
              linewidth=linewidths[name_agent],ms=marker_sizes[name_agent])"""
     plt.errorbar([pas_VI*i for i in range(min_length_agent[name_agent])],mean_pol_error_agent[name_agent], 
                  yerr=std_pol_error_agent[name_agent],color=colors[name_agent],linewidth=linewidths[name_agent],
-                 elinewidth=0.5,label=rename[name_agent],ms=marker_sizes[name_agent],marker=markers[name_agent])
+                 elinewidth=0.5,label=rename[name_agent],ms=marker_sizes[name_agent],marker=markers[name_agent],fillstyle='none')
 plt.xlabel("Steps")
 plt.ylabel("Policy value error")
 plt.grid(linestyle='--')
@@ -189,7 +189,7 @@ pygame.quit()
 
 results={'seed':seed,'nb_iters':nb_iters,'trials':trials,'max_step':max_step,'agent_parameters':agent_parameters,'agents':agents,'environments':names_env,'rewards':rewards,'step_number':step_number,'pol_error':pol_error}
 
-np.save('Results/'+temps+'.npy',pol_error)
+np.save('Results/'+temps+'_polerror.npy',pol_error)
 save_pickle(results,'Results/'+temps+'.pickle')
 #test=open_pickle('Results/'+temps+'.pickle')
 

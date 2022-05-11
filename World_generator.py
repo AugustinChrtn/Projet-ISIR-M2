@@ -465,7 +465,7 @@ def non_stat_Lopes_article(nombre=20):
         np.save('Mondes/Transitions_Lopes_non_stat'+str(i+1)+'.npy',transitions)
         
         
-def non_stat_Lopes(nombre=20):
+def non_stat_Lopes_optimal(nombre=20):
     for i in range(nombre):
         transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
         optimal_path=[(0,0),(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4),(2,4)]
@@ -484,6 +484,31 @@ def non_stat_Lopes(nombre=20):
             for action in range(5):
                 transitions[action][state_to_change[0]][state_to_change[1]]=new_transitions[action]
         np.save('Mondes/Transitions_Lopes_non_stat'+str(i+1)+'.npy',transitions)
+        
+        
+def non_stat_Lopes(nombre=20):
+    for i in range(nombre):
+        transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
+        all_states=[(i,j) for i in range(5) for j in range(5)]
+        
+        for state_to_change in all_states:
+            liste_rotation=[j for j in range(5)]
+            valid=False
+            while not valid:
+                valid=True
+                for k in range(5):
+                    if liste_rotation[k]==k:
+                        valid=False
+                        random.shuffle(liste_rotation)
+                        break
+            new_transitions=[transitions[rotation][state_to_change[0]][state_to_change[1]] for rotation in liste_rotation]
+            for action in range(5):
+                transitions[action][state_to_change[0]][state_to_change[1]]=new_transitions[action]
+        np.save('Mondes/Transitions_Lopes_non_stat'+str(i+1)+'.npy',transitions)
+
+
+
+
     
 """from Useful_functions import value_iteration
 

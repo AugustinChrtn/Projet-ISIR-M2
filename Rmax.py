@@ -38,9 +38,11 @@ class Rmax_Agent:
                     self.nSA[old_state][action] +=1
                     self.Rsum[old_state][action] += reward
                     self.nSAS[old_state][action][new_state] += 1
-                    
-                    if self.nSA[old_state][action] >= self.max_visits[old_state][action] and self.nSA[old_state][action] <= 1+self.max_visits[old_state][action] :
-                    #if self.nSA[old_state][action] >= self.max_visits[old_state][action] :
+                    self.tSAS[old_state][action]=defaultdict(lambda:.0)                      
+                    for next_state in self.nSAS[old_state][action].keys():
+                        self.tSAS[old_state][action][next_state] = self.nSAS[old_state][action][next_state]/self.nSA[old_state][action]
+                        
+                    if self.nSA[old_state][action] == self.max_visits[old_state][action]:
                         self.known_state_action.append((old_state,action))
                         self.tSAS[old_state][action]=defaultdict(lambda:.0)
                         self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action]                         
@@ -49,6 +51,13 @@ class Rmax_Agent:
                         for j in range(self.VI): #cf formule logarithme Strehl 2009 PAC Analysis
                             for state_known,action_known in self.known_state_action:
                                 self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+                    
+                    for i in range(5):
+                        for state_known in self.nSA.keys():
+                            for action_known in self.nSA[state_known].keys():
+                                self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+    
+    
     def choose_action(self):
         self.step_counter+=1
         state=self.environment.current_location
