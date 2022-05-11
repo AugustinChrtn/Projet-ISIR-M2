@@ -61,13 +61,13 @@ agent_parameters={Q_Agent:{'alpha':0.5,'beta':0.05,'gamma':0.95,'exploration':'s
             KalmanMB_Agent:{'gamma':0.95,'epsilon':0.1,'H_update':3,'entropy_factor':0.1,'epis_factor':50,'alpha':0.2,'gamma_epis':0.5,'variance_ob':0.02,'variance_tr':0.5},
             QMB_Agent:{'gamma':0.95,'epsilon':0.1,'known_states':True},
             Rmax_Agent:{'gamma':0.95, 'm':8,'Rmax':1,'known_states':True,'VI':50},
-            BEB_Agent:{'gamma':0.95,'beta':5,'known_states':True,'coeff_prior':1,'informative':True},
+            BEB_Agent:{'gamma':0.95,'beta':8,'known_states':True,'coeff_prior':3,'informative':True},
             BEBLP_Agent:{'gamma':0.95,'beta':1,'step_update':10,'coeff_prior':0.001,'alpha':0.3},
             RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':0.2,'m':0.9,'VI':50}}
 
 
 nb_iters=1
-trials = 250
+trials = 200
 max_step =30
 photos=[10,40,70,100,130,160,199]
 screen=0
@@ -75,11 +75,11 @@ accuracy=0.05
 pas_VI=50
 
 #agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent,'QA':Q_Agent,'KAS':Kalman_agent_sum,'KMB':KalmanMB_Agent}
-agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent}
+agents={'BEB':BEB_Agent}
 
 #environments=['Lopes_nostat_{0}'.format(num) for num in range(1,21),'Two_Step']+['D_{0}'.format(num) for num in range(1,21)]+['U_{0}'.format(num) for num in range(1,21)]
 
-names_env=['Lopes_nostat_{0}'.format(num) for num in range(1,11)]
+names_env=['Lopes']
 
 rewards={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
 steps={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
@@ -160,9 +160,9 @@ for name_agent in agents.keys():
     
 
 rename={'RA':'R-max','BEB':'BEB','BEBLP':'ζ-EB','RALP':'ζ-R-max','QMB':'Ɛ-greedy'}
-colors={'RA':'blue','RALP':'blue','QMB':'red','BEB':'black','BEBLP':'black'}
+colors={'RA':'royalblue','RALP':'royalblue','QMB':'red','BEB':'black','BEBLP':'black'}
 markers={'RA':'^','RALP':'o','BEB':'x','BEBLP':'*','QMB':'s'}
-linewidths={'RA':'0.75','RALP':'1','BEB':'0.75','BEBLP':'1','QMB':'0.75'}
+linewidths={'RA':'0.75','RALP':'1.25','BEB':'0.75','BEBLP':'1.25','QMB':'0.75'}
 marker_sizes={'RA':'3','RALP':'3','BEB':'3','BEBLP':'3','QMB':'3'}
 temps=str(round(time.time()))
 fig=plt.figure(dpi=1200)
