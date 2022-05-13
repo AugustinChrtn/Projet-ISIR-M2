@@ -76,7 +76,7 @@ class RmaxLP_Agent:
                         old_CV,old_variance=self.cross_validation(new_dict)
                         self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
                     
-                    if self.step_counter-self.last_model_update==10:
+                    if self.step_counter-self.last_model_update==5:
                         self.last_model_update=self.step_counter
                         for i in range(self.VI):
                             for state_known in self.nSA:

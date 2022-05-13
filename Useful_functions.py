@@ -360,8 +360,8 @@ def policy_evaluation(environment,policy,gamma,accuracy):
         delta=0
         for state,value in V.items():
             value_V=V[state]
-            action=policy[state]
-            V[state]=np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()])
+            actions=policy[state]
+            V[state]=np.sum([probability_action*np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action,probability_action in actions.items()])
             delta=max(delta,np.abs(value_V-V[state]))
     return V
 
@@ -371,7 +371,12 @@ def get_policy(agent):
         q_values = agent.Q[state]
         max_value_state=max(q_values.values())
         best_action = np.random.choice([k for k, v in q_values.items() if v == max_value_state])
-        action_every_state[state]=best_action 
+        action_every_state[state]={best_action:1}
+        if type(agent).__name__=='QMB_Agent':
+            random_actions=list(range(5))
+            del random_actions[best_action]
+            action_every_state[state]={other_action: agent.epsilon/5 for other_action in random_actions}
+            action_every_state[state][best_action]=1-agent.epsilon+agent.epsilon/5
     return action_every_state
 
 ##Optimal policies ###
