@@ -41,7 +41,7 @@ class BEB_Agent:
         self.informative=informative
         self.known_state_action=[]
         if self.known_states: self.ajout_states()
-            
+        self.last_model_update=0
     def learn(self,old_state,reward,new_state,action):
                     
         self.uncountered_state(new_state) #Si l'état est nouveau, création des q-valeurs pour les actions possibles
@@ -57,25 +57,23 @@ class BEB_Agent:
         
         #Ajout du bonus qui dépend du nombre de passages
         self.bonus[old_state][action]=self.beta/(1+self.prior_0[old_state][action])
-        
-        for i in range(5):
-            for state_known in self.nSA.keys():
-                for action_known in self.nSA[state_known].keys():
-                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-                
-                    
-                    
-        """if self.nSA[old_state][action]==4:
-                self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
-                    self.known_state_action.append((old_state,action))
-            if self.step_counter%200==10:
-                for i in range(10):
-                    for state_known,action_known in self.known_state_action:
-                        self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+                  
+                        
+        if self.nSA[old_state][action]==8:
+            self.last_model_update=self.step_counter
+            self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
+            self.known_state_action.append((old_state,action))
             for i in range(5):
                 for state_known,action_known in self.known_state_action:
                     self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()]) 
-                    """
+         
+        if self.step_counter-self.last_model_update==10:
+            self.last_model_update=self.step_counter
+            for i in range(50):
+                for state_known in self.nSA:
+                    for action_known in self.nSA[state_known]:
+                        self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+
                     
     def choose_action(self): #argmax pour choisir l'action
         self.step_counter+=1
@@ -108,6 +106,8 @@ class BEB_Agent:
                     self.prior[state_1][action]=prior_coeff_transitions
                     self.prior_0[state_1][action]=sum(prior_coeff_transitions.values())
                 else : 
-                    for state_2 in self.states : self.prior[state_1][action][state_2]=self.prior[state_1][action][state_2]=self.coeff_prior
+                    for state_2 in self.states : 
+                        self.prior[state_1][action][state_2]=self.prior[state_1][action][state_2]=self.coeff_prior
+                        self.prior_0[state_1][action]=len(self.states)*self.coeff_prior
                 self.bonus[state_1][action]=self.beta
                 self.Q[state_1][action]=(1+self.beta)/(1-self.gamma)

@@ -493,14 +493,7 @@ def non_stat_Lopes(nombre=20):
         
         for state_to_change in all_states:
             liste_rotation=[j for j in range(5)]
-            valid=False
-            while not valid:
-                valid=True
-                for k in range(5):
-                    if liste_rotation[k]==k:
-                        valid=False
-                        random.shuffle(liste_rotation)
-                        break
+            random.shuffle(liste_rotation)
             new_transitions=[transitions[rotation][state_to_change[0]][state_to_change[1]] for rotation in liste_rotation]
             for action in range(5):
                 transitions[action][state_to_change[0]][state_to_change[1]]=new_transitions[action]

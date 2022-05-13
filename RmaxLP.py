@@ -33,7 +33,7 @@ class RmaxLP_Agent:
         self.VI=VI
         self.known_state_action=[]
         self.ajout_states()
-        
+        self.last_model_update=0
     def learn(self,old_state,reward,new_state,action):
                     
                     
@@ -47,6 +47,7 @@ class RmaxLP_Agent:
                     
                     if self.LP[old_state][action] < self.m :
                         if (old_state,action) not in self.known_state_action :
+                            self.last_model_update=self.step_counter
                             self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action] 
                             self.known_state_action.append((old_state,action))
                             self.tSAS[old_state][action]=defaultdict(lambda:.0)                      
@@ -59,6 +60,9 @@ class RmaxLP_Agent:
                         self.R[old_state][action]=self.Rmax      
                         if (old_state,action) in self.known_state_action: self.known_state_action.remove((old_state,action))
                     
+                    if self.nSA[old_state][action]<self.step_update:
+                        new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
+                        self.LP[old_state][action]=new_CV+self.alpha*np.sqrt(new_variance)
                     
                     if self.nSA[old_state][action]>self.step_update:
                         new_dict={}
@@ -72,11 +76,13 @@ class RmaxLP_Agent:
                         old_CV,old_variance=self.cross_validation(new_dict)
                         self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
                     
-                    for i in range(5):
-                        for state_known in self.nSA.keys():
-                            for action_known in self.nSA[state_known].keys():
-                                self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-  
+                    if self.step_counter-self.last_model_update==10:
+                        self.last_model_update=self.step_counter
+                        for i in range(self.VI):
+                            for state_known in self.nSA:
+                                for action_known in self.nSA[state_known]:
+                                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+                                
     def choose_action(self):
         self.step_counter+=1
         state=self.environment.current_location
@@ -99,7 +105,7 @@ class RmaxLP_Agent:
         cv,v=0,[]
         for next_state,next_state_count in nSAS_SA.items():
             value=(next_state_count-1)/sum(nSAS_SA.values())
-            if value ==0: log_value=-2
+            if value ==0: log_value=-1
             else: log_value=np.log(value)
             cv-=next_state_count*log_value
             v+=[-log_value]*next_state_count

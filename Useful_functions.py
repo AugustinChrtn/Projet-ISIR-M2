@@ -39,8 +39,8 @@ def play(environment, agent, trials=200, max_step=500, screen=1,photos=[10,20,50
     step_number=[]
     policy_value_error=[]
     pol_updated=False
+    val_iteration,_=value_iteration(environment,agent.gamma,accuracy)
     for trial in range(trials):
-        val_iteration,_=value_iteration(environment,agent.gamma,accuracy)
         if screen : take_picture(agent,trial,environment,photos) #Visualisation
         
         cumulative_reward, step, game_over= 0,0,False

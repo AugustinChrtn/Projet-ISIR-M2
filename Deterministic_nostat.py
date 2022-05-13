@@ -74,7 +74,7 @@ class Deterministic_no_stat:
         
     def make_step(self, action):
         self.number_steps+=1
-        if self.number_steps>5000 and not self.changed and self.current_location==self.first_location :
+        if self.number_steps>2000 and not self.changed and self.current_location==self.first_location :
             number_steps=self.number_steps
             self.__init__(self.world2,self.world)
             self.changed=True

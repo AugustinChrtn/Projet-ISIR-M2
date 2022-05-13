@@ -45,6 +45,7 @@ class BEBLP_Agent:
         self.coeff_prior=coeff_prior
         self.known_state_action=[]
         self.ajout_states()
+        self.last_update_model=0
         
     def learn(self,old_state,reward,new_state,action):
                                         
@@ -58,9 +59,8 @@ class BEBLP_Agent:
         self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
         self.last_k[old_state][action][self.nSA[old_state][action]%self.step_update]=new_state
         #Ajout du bonus qui dépend du nombre de passages
-        #self.Q[old_state][action]=self.R[old_state][action]+self.bonus[old_state][action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[old_state][action][next_state] for next_state in self.tSAS[old_state][action].keys()])
         """
-        if self.LP[old_state][action]<2:
+        if self.LP[old_state][action]<0.9:
             if(old_state,action) not in self.known_state_action:
                 self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
                 self.known_state_action.append((old_state,action))
@@ -70,13 +70,11 @@ class BEBLP_Agent:
         else : 
             if (old_state,action) in self.known_state_action: self.known_state_action.remove((old_state,action))     
         """
-        """
-        if self.step_counter%50==25:
-            for i in range(50):
-                for state_known in self.nSAS.keys():
-                    for action_known in self.nSAS[state_known].keys():
-                        self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-        """
+        if self.nSA[old_state][action]<self.step_update:
+            new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
+            self.LP[old_state][action]=new_CV+self.alpha*np.sqrt(new_variance)
+            self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
+            
         if self.nSA[old_state][action]>self.step_update:
             new_dict={}
             for k,v in self.nSAS[old_state][action].items():
@@ -89,23 +87,15 @@ class BEBLP_Agent:
             old_CV,old_variance=self.cross_validation(new_dict)
             self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
             self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
-        
+
+        """if self.step_counter-self.last_update_model==20:
+            self.last_update_model=self.step_counter"""
+
         for i in range(5):
-            for state_known in self.nSAS.keys():
-                for action_known in self.nSAS[state_known].keys():
+            for state_known in self.nSAS:
+                for action_known in self.nSAS[state_known]:
                     self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-            
-            """if self.LP[old_state][action]<2:
-                if(old_state,action) not in self.known_state_action:
-                    self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
-                    self.known_state_action.append((old_state,action))
-                    for i in range(20):
-                        for state_known,action_known in self.known_state_action:
-                            self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-            else : 
-                if (old_state,action) in self.known_state_action: self.known_state_action.remove((old_state,action)) 
-            """
-            
+    
     def choose_action(self): #argmax pour choisir l'action
         self.step_counter+=1
         state=self.environment.current_location
@@ -123,9 +113,9 @@ class BEBLP_Agent:
             for action in self.environment.actions:
                 for state_2 in self.states:
                     self.prior[state_1][action][state_2]=self.coeff_prior
-                self.bonus[state_1][action]=self.beta
                 self.Q[state_1][action]=(1+self.beta)/(1-self.gamma)
                 self.LP[state_1][action]=np.log(number_states)
+                self.bonus[state_1][action]=self.beta/(1+1/np.sqrt(self.LP[state_1][action]))
                 
     def cross_validation(self,nSAS_SA): 
         """cv,v=0,[]
@@ -165,7 +155,7 @@ class BEBLP_Agent:
         cv,v=0,[]
         for next_state,next_state_count in nSAS_SA.items():
             value=(next_state_count-1)/sum(nSAS_SA.values())
-            if value ==0: log_value=-2
+            if value ==0: log_value=-1
             else: log_value=np.log(value)
             cv-=next_state_count*log_value
             v+=[-log_value]*next_state_count
