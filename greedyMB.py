@@ -4,7 +4,7 @@ from collections import defaultdict
 
 class QMB_Agent:
 
-    def __init__(self,environment, gamma=0.95,epsilon = 0.1,known_states=True):
+    def __init__(self,environment, gamma=0.95,epsilon = 0.01,known_states=True):
         
         self.environment=environment
         self.gamma = gamma
@@ -15,7 +15,6 @@ class QMB_Agent:
         
         self.nSA = defaultdict(lambda: defaultdict(lambda: 0.0))
         self.nSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
-        self.Rsum = defaultdict(lambda: defaultdict(lambda: 0.0))
         
         self.Q = defaultdict(lambda: defaultdict(lambda: 0.0))
         
@@ -31,20 +30,17 @@ class QMB_Agent:
                     self.uncountered_state(new_state)
                     
                     self.nSA[old_state][action] +=1
-                    self.Rsum[old_state][action] += reward
                     self.nSAS[old_state][action][new_state] += 1
-                    self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action]  
+                    self.R[old_state][action]=reward
 
-                    self.tSAS[old_state][action]=defaultdict(lambda:0.0)   
+                    if self.nSA[old_state][action]==1:self.tSAS[old_state][action]=defaultdict(lambda:0.0)   
                     for next_state in self.nSAS[old_state][action].keys():
                         self.tSAS[old_state][action][next_state] = self.nSAS[old_state][action][next_state]/self.nSA[old_state][action]
-
-                    #self.Q[old_state][action]=self.R[old_state][action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[old_state][action][next_state] for next_state in self.tSAS[old_state][action].keys()])
                     
-                    for i in range(5):
-                            for visited_state in self.nSA.keys():
-                                for taken_action in self.nSA[visited_state].keys():
-                                    self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action].keys()])
+                    for i in range(50):
+                            for visited_state in self.nSA:
+                                for taken_action in self.nSA[visited_state]:
+                                    self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action]])
                     
     def choose_action(self):
         self.step_counter+=1

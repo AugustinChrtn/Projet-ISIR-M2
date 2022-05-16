@@ -21,7 +21,6 @@ class BEB_Agent:
         self.beta=beta
         
         self.R = defaultdict(lambda: defaultdict(lambda: 0.0)) #Récompenses
-        self.Rsum = defaultdict(lambda: defaultdict(lambda: 0.0)) #Somme récompenses accumulées 
         self.tSAS = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0))) #Transitions
         
         self.nSA = defaultdict(lambda: defaultdict(lambda: 0.0)) #Compteur passage (état,action)
@@ -35,21 +34,23 @@ class BEB_Agent:
         self.step_counter=0
         
         self.known_states=known_states
+        
         self.prior=defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
         self.prior_0=defaultdict(lambda: defaultdict(lambda: defaultdict(lambda:0.0)))
+        
         self.coeff_prior=coeff_prior
         self.informative=informative
-        self.known_state_action=[]
+        
+        
         if self.known_states: self.ajout_states()
-        self.last_model_update=0
+    
     def learn(self,old_state,reward,new_state,action):
                     
         self.uncountered_state(new_state) #Si l'état est nouveau, création des q-valeurs pour les actions possibles
                     
         self.nSA[old_state][action] +=1
-        self.Rsum[old_state][action] += reward
         self.nSAS[old_state][action][new_state] += 1
-        self.R[old_state][action]=self.Rsum[old_state][action]/self.nSA[old_state][action]
+        self.R[old_state][action]=reward
         self.prior[old_state][action][new_state]+=1
         self.prior_0[old_state][action]+=1
         #Modifier les probabilités de transition selon le prior avec distribution de dirichlet
@@ -58,22 +59,12 @@ class BEB_Agent:
         #Ajout du bonus qui dépend du nombre de passages
         self.bonus[old_state][action]=self.beta/(1+self.prior_0[old_state][action])
                   
-                        
-        if self.nSA[old_state][action]==8:
-            self.last_model_update=self.step_counter
-            self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
-            self.known_state_action.append((old_state,action))
-            for i in range(5):
-                for state_known,action_known in self.known_state_action:
-                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()]) 
-         
-        if self.step_counter-self.last_model_update==10:
-            self.last_model_update=self.step_counter
-            for i in range(50):
-                for state_known in self.nSA:
+
+        for i in range(50):
+            for state_known in self.nSA:
                     for action_known in self.nSA[state_known]:
                         self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-
+                
                     
     def choose_action(self): #argmax pour choisir l'action
         self.step_counter+=1

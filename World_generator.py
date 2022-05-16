@@ -328,6 +328,25 @@ def generer_pattern_incertain(nombre=20):
                     transitions[action][row,col]=final_transitions
         np.save('Mondes/Transitions_'+str(i+1)+'_U.npy',transitions)
         
+def permuter_transition_pattern(nombre=20):
+    for i in range(nombre):
+        transitions=np.load('Mondes/Transitions_' + str(i+1) +'.npy',allow_pickle=True)
+        for (row,col),value in pattern.items():
+            if value==0:
+                liste_rotation=[j for j in range(5)]
+                valid=False
+                while not valid:
+                    valid=True
+                    for k in range(5):
+                        if liste_rotation[k]==k:
+                            valid=False
+                            random.shuffle(liste_rotation)
+                            break
+                    new_transitions=[transitions[rotation][row][col] for rotation in liste_rotation]
+                    for action in range(5):
+                        transitions[action][row][col]=new_transitions[action]
+        np.save('Mondes/Transitions_'+str(i+1)+'_U.npy',transitions)
+        
 def generer_transitions_bloquees(nombre=20):
     for i in range(nombre):
         transitions=np.load('Mondes/Transitions_' + str(i+1) +'.npy',allow_pickle=True)

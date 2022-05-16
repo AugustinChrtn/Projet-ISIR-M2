@@ -27,14 +27,14 @@ from Rmax import Rmax_Agent
 from BEB import BEB_Agent
 from BEBLP import BEBLP_Agent
 from RmaxLP import RmaxLP_Agent
-
+from greedyMB import QMB_Agent
 from Representation import Graphique
 
 
 
 #MAIN
 
-def play(environment, agent, trials=200, max_step=500, screen=1,photos=[10,20,50,100,199,300,499],accuracy=0.01,pas_VI=100):
+def play(environment, agent, trials=200, max_step=500, screen=0,photos=[10,20,50,100,199,300,499],accuracy=0.01,pas_VI=50):
     reward_per_episode = []
     step_number=[]
     policy_value_error=[]
@@ -88,6 +88,7 @@ for number_world in range(1,21):
     all_environments["UB_{0}".format(number_world)]=Uncertain_State_B
     all_environments["UU_{0}".format(number_world)]=Uncertain_State_U
     all_environments["Lopes_nostat_{0}".format(number_world)]=Lopes_nostat
+
 
 
 ### PICTURES ###
@@ -159,91 +160,6 @@ def open_pickle(path):
     with open(path, 'rb') as file:
         return pickle.load(file)
 
-###### OPTIMISATION ######
-
-def find_best_duo_Q_learning(number_environment,alpha=0.6,uncertain=False):
-    
-    beta_range=[np.around(2*j*1e-4,decimals=5) for j in range(10,101,10)]
-    gamma_range=[(0.95+i/100) for i in range(5)]
-    
-    world=np.load('Mondes/World_10.npy')
-    transitions=np.load('Mondes/Transitions_10.npy',allow_pickle=True)
-    
-    results=[]
-    for index_beta,beta in enumerate(beta_range):
-        print(index_beta) 
-        for gamma in gamma_range:
-                if uncertain : environment=Uncertain_State(world,transitions)
-                else : environment=Deterministic_State(world)
-                QA=Q_Agent(environment,alpha,beta,gamma)
-                reward_per_episode, counter_QA, Q_values= play(environment,QA,trials=200)
-                results.append([beta,gamma,np.mean(reward_per_episode)])
-    return np.array(results)
-
-
-
-def find_best_duo_Kalman_sum(number_environment,uncertain=False):
-    
-    variance_tr_range=[np.around(j*10,decimals=4) for j in range(1,21,2)]
-    curiosity_factor_range=[np.around(j*1e-1,decimals=5) for j in range(1,21,2)] 
-    
-    world=np.load('Mondes/World_'+str(number_environment)+'.npy')
-    transitions=np.load('Mondes/Transitions_'+str(number_environment)+'.npy',allow_pickle=True)
-    
-    results=[]
-    for index_variance_tr,variance_tr in enumerate(variance_tr_range):
-        print(index_variance_tr) 
-        for curiosity_factor in curiosity_factor_range:
-                if uncertain : environment=Uncertain_State(world,transitions)
-                else : environment = Deterministic_State(world)
-                KAS=Kalman_agent_sum(environment,gamma=0.99,variance_ob=1,variance_tr=variance_tr,curiosity_factor=curiosity_factor)
-                reward_per_episode,counter_KAS, table_mean_KAS,table_variance_KAS = play(environment,KAS,trials=200)
-                results.append([variance_tr,curiosity_factor,np.mean(reward_per_episode)])
-    return np.array(results)
-
-
-
-def find_best_trio_Q_learning(number_environment,uncertain=False):
-    alpha_range=[np.around(j*1e-2,decimals=4) for j in range(40,81,4)]
-    beta_range=[np.around(2*j*1e-4,decimals=5) for j in range(10,101,10)]
-    gamma_range=[(0.9+i/100) for i in range(3)]    
-    
-    world=np.load('Mondes/World_'+str(number_environment)+'.npy')
-    transitions=np.load('Mondes/Transitions_'+str(number_environment)+'.npy',allow_pickle=True)
-    
-    results=[]
-    for index_alpha,alpha in enumerate(alpha_range):
-        print(index_alpha) 
-        for beta in beta_range:
-            for gamma in gamma_range:
-                if uncertain : environment=Uncertain_State(world,transitions)
-                else : environment = Deterministic_State(world)
-                QA= Q_Agent(environment,alpha,beta,gamma)
-                reward_per_episode, counter_QA, Q_values= play(environment,QA,trials=200)
-                results.append([alpha,beta,gamma,np.mean(reward_per_episode)])
-    return np.array(results)
-           
-
-def find_best_trio_Kalman_sum(number_environment,uncertain=False):
-    variance_tr_range=[np.around(j*10,decimals=4) for j in range(1,21,2)]
-    curiosity_factor_range=[np.around(j*1e-1,decimals=5) for j in range(1,21,2)] 
-    gamma_range=[np.around(0.9+i/50,decimals=4) for i in range(5)]   
-    
-    world=np.load('Mondes/World_'+str(number_environment)+'.npy')
-    transitions=np.load('Mondes/Transitions_'+str(number_environment)+'.npy',allow_pickle=True)  
-    
-    results=[]
-    
-    for index_variance_tr,variance_tr in enumerate(variance_tr_range):
-        print(index_variance_tr) 
-        for curiosity_factor in curiosity_factor_range:
-            for gamma in gamma_range : 
-                if uncertain : environment=Uncertain_State(world,transitions)
-                else : environment = Deterministic_State(world)
-                KAS=Kalman_agent_sum(environment,gamma=gamma,variance_ob=1,variance_tr=variance_tr,curiosity_factor=curiosity_factor)
-                reward_per_episode,counter_KAS, table_mean_KAS,table_variance_KAS = play(environment,KAS,trials=200)
-                results.append([variance_tr,curiosity_factor,gamma,np.mean(reward_per_episode)])
-    return np.array(results)
 
 ######## VISUALISATION ########
 
@@ -252,7 +168,6 @@ def convert_from_default(dic):
     if isinstance(dic,defaultdict):
         return dict((key,convert_from_default(value)) for key,value in dic.items())
     else : return dic
-
 
 
 def plot3D(table_3D,x_name='beta',y_name='gamma'):
@@ -300,7 +215,7 @@ def plot_interactive(name_fig):
     figx=pickle.load(open('Interactive/'+name_fig,'rb'))
     figx.show()
 
-#Stats 
+####### GET STATS #####
 
 def convergence(array,longueur=30,variation=0.2,absolu=0.1,artefact=3):
     for i in range(len(array)-longueur):
@@ -318,7 +233,7 @@ def convergence(array,longueur=30,variation=0.2,absolu=0.1,artefact=3):
                 return [len(array)-len(array[i+1:]),np.mean(array[i+1:]),np.var(array[i+1:])]            
     return [len(array)-1,np.mean(array),np.var(array)]
 
-#Evaluating a policy
+###### Policy evaluation #####
 
 def value_iteration(environment,gamma,accuracy):
     V={state:1 for state in environment.states}
@@ -402,11 +317,10 @@ def compute_optimal_policies(environments_parameters=environments_parameters):
 ### Parametter fitting ##
 
 environment_names=['Lopes']
-betas=[i for i in range(1,2)]
-priors=[1*i for i in range(1,100,10)]
-def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=5,screen=0):
+
+def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=5,screen=0,pas_VI=25):
     BEB_parameters={(beta,prior):{'gamma':0.95,'beta':beta,'known_states':True,'coeff_prior':prior} for beta in betas for prior in priors}
-    pol_error={}
+    pol_error={(beta,prior):[] for beta in betas for prior in priors}
     for name_environment in environment_names:   
         print(name_environment)
         environment=all_environments[name_environment](**environments_parameters[name_environment])                
@@ -415,21 +329,18 @@ def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accura
             for prior in priors :
                 BEB=BEB_Agent(environment,**BEB_parameters[(beta,prior)]) #Defining a new agent from the dictionary agents
                 
-                reward,step_number,policy_value_error= play(environment,BEB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy) #Playing in environment
-                index_convergence=-1
-                for i in range(len(policy_value_error)-1):
-                    if policy_value_error[i] >-0.5 and policy_value_error[i+1] >-0.5 :
-                        index_convergence=i*50
-                        break
-                pol_error[beta,prior]=index_convergence
-    return pol_error
+                _,_,policy_value_error= play(environment,BEB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+                pol_error[beta,prior].append(policy_value_error)
+    min_length_param={(beta,prior):np.min([len(pol_error[beta,prior][i]) for i in range(len(environment_names))]) for beta in betas for prior in priors}
+    mean_pol_error={(beta,prior): np.average([pol_error[beta,prior][:min_length_param[beta,prior]]],axis=0) for beta in betas for prior in priors}
+
+    return mean_pol_error
 
 
-alphas=[0.1*i for i in range(1,10,1)]
-ms=[0.1*i for i in range(1,17,2)]
-def fitting_RALP(environment_names,alphas,ms,trials = 200,max_step = 30,accuracy=.05,screen=0):
-    RALP_parameters={(alpha,m):{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':alpha,'m':m,'VI':50} for alpha in alphas for m in ms}
-    pol_error={}
+
+def fitting_RALP(environment_names,alphas,ms,trials = 200,max_step = 30,accuracy=.05,screen=0,pas_VI=25):
+    RALP_parameters={(alpha,m):{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':alpha,'m':m} for alpha in alphas for m in ms}
+    pol_error={(alpha,m): [] for alpha in alphas for m in ms}
     for name_environment in environment_names:   
         print(name_environment)
         environment=all_environments[name_environment](**environments_parameters[name_environment])                
@@ -438,18 +349,139 @@ def fitting_RALP(environment_names,alphas,ms,trials = 200,max_step = 30,accuracy
             for m in ms :
                 RALP=RmaxLP_Agent(environment,**RALP_parameters[(alpha,m)]) #Defining a new agent from the dictionary agents
                 
-                reward,step_number,policy_value_error= play(environment,RALP,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy) #Playing in environment
-                index_convergence=-1
-                for i in range(len(policy_value_error)-1):
-                    if policy_value_error[i] >-0.5 and policy_value_error[i+1] >-0.5 :
-                        index_convergence=i*50
-                        break
-                pol_error[alpha,m]=index_convergence
-    return pol_error
+                reward,step_number,policy_value_error= play(environment,RALP,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+
+                pol_error[alpha,m].append(policy_value_error)
+    min_length_param={(alpha,m):np.min([len(pol_error[alpha,m][i]) for i in range(len(environment_names))]) for alpha in alphas for m in ms}
+    mean_pol_error={(alpha,m): np.average([pol_error[alpha,m][:min_length_param[alpha,m]]],axis=0) for alpha in alphas for m in ms}
+    return mean_pol_error
 
 
 
-#a=fitting_BEB(environment_names,betas,priors)
+def fitting_QMB(environment_names,epsilons,trials=50,max_step=30,accuracy=0.01,screen=0,pas_VI=25):
+    QMB_parameters={epsilon:{'gamma':0.95,'known_states':True,'epsilon':epsilon} for epsilon in epsilons}
+    pol_error={epsilon:[] for epsilon in epsilons}
+    for name_environment in environment_names:   
+        print(name_environment)
+        environment=all_environments[name_environment](**environments_parameters[name_environment])                
+        for epsilon in epsilons:
+            print(epsilon)
+            QMB=QMB_Agent(environment,**QMB_parameters[epsilon]) #Defining a new agent from the dictionary agents
+                
+            _,_,policy_value_error= play(environment,QMB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+                    
+            pol_error[epsilon].append(policy_value_error)
+    min_length_param={epsilon:np.min([len(pol_error[epsilon][i]) for i in range(len(environment_names))]) for epsilon in epsilons}
+    mean_pol_error={epsilon: np.average([pol_error[epsilon][:min_length_param[epsilon]]],axis=0) for epsilon in epsilons}
+    return mean_pol_error
 
 
+def fitting_BEBLP(environment_names,betas,alphas,trials = 300,max_step = 30,accuracy=5,screen=0,pas_VI=25):
+    BEBLP_parameters={(beta,alpha):{'gamma':0.95,'beta':beta,'alpha':alpha,'coeff_prior':0.001} for beta in betas for alpha in alphas}
+    pol_error={(beta,alpha):[] for beta in betas for alpha in alphas}
+    for name_environment in environment_names:   
+        print(name_environment)
+        environment=all_environments[name_environment](**environments_parameters[name_environment])                
+        for beta in betas :
+            print(beta)
+            for alpha in alphas :
+                BEBLP=BEBLP_Agent(environment,**BEBLP_parameters[(beta,alpha)]) #Defining a new agent from the dictionary agents
+                
+                _,_,policy_value_error= play(environment,BEBLP,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+                pol_error[beta,alpha].append(policy_value_error)
+    min_length_param={(beta,alpha):np.min([len(pol_error[beta,alpha][i]) for i in range(len(environment_names))]) for beta in betas for alpha in alphas}
+    mean_pol_error={(beta,alpha): np.average([pol_error[beta,alpha][:min_length_param[beta,alpha]]],axis=0) for beta in betas for alpha in alphas}
+
+    return mean_pol_error
+
+def fitting_RA(environment_names,u_ms,ms,trials = 200,max_step = 30,accuracy=.05,screen=0,pas_VI=25):
+    RALP_parameters={(m,u_m):{'gamma':0.95,'Rmax':1,'m':m,'u_m':u_m} for u_m in u_ms for m in ms}
+    pol_error={(m,u_m): [] for m in ms for u_m in u_ms}
+    for name_environment in environment_names:   
+        print(name_environment)
+        environment=all_environments[name_environment](**environments_parameters[name_environment])                
+        for u_m in u_ms :
+            print(u_m)
+            for m in ms :
+                RA=Rmax_Agent(environment,**RALP_parameters[(m,u_m)]) #Defining a new agent from the dictionary agents
+                
+                r_,_,policy_value_error= play(environment,RA,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+
+                pol_error[m,u_m].append(policy_value_error)
+    min_length_param={(m,u_m):np.min([len(pol_error[m,u_m][i]) for i in range(len(environment_names))]) for u_m in u_ms for m in ms}
+    mean_pol_error={(m,u_m): np.average([pol_error[m,u_m][:min_length_param[m,u_m]]],axis=0) for u_m in u_ms for m in ms}
+    return mean_pol_error
+
+
+
+
+pas_VI=25
+accuracy=0.01
+trials=150
+max_step=30
+
+
+environment_names=['Lopes']*1
+
+epsilons=[0.005,0.01,0.02,0.05,0.1]
+a=fitting_QMB(environment_names,epsilons,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+
+plt.figure()
+for epsilon,mean_pol in a.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='epsilon='+str(epsilon),marker='o')
+plt.title('e-greedy_Lopes')
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Parameter fitting/e-greedy_Lopes.png')
+plt.show()
+
+
+betas=[1,2,3]
+priors=[1,3,5]
+b=fitting_BEB(environment_names,betas=betas,priors=priors,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+
+plt.figure()
+for (beta,prior),mean_pol in b.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='beta='+str(beta)+', prior='+str(prior),marker='o')
+plt.title('BEB_Lopes')
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Parameter fitting/BEB_Lopes.png')
+plt.show()
+
+alphas=[0.1,0.5,1]
+ms=[0.4,0.8,1.2]
+c=fitting_RALP(environment_names,alphas=alphas,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+plt.figure()
+for (alpha,m),mean_pol in c.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='alpha='+str(alpha)+', m='+str(m),marker='o')
+plt.title('RmaxLP_Lopes')
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Parameter fitting/RmaxLP_Lopes.png')
+plt.show()
+
+alphas=[0.1,0.5,1]
+betas=[1,2,3]
+d=fitting_BEBLP(environment_names,alphas=alphas,betas=betas,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+plt.figure()
+for (alpha,beta),mean_pol in d.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='alpha='+str(alpha)+', beta='+str(beta),marker='o')
+plt.title('BEBLP_Lopes')
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Parameter fitting/BEBLP_Lopes.png')
+plt.show()
+
+u_ms=[1,2,3]
+ms=[4,6,8]
+e=fitting_RA(environment_names,u_ms=u_ms,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+plt.figure()
+for (m,u_m),mean_pol in e.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='m='+str(m)+', u_m='+str(u_m),marker='o')
+plt.title('Rmax_Lopes')
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Parameter fitting/Rmax_Lopes.png')
+plt.show()
 

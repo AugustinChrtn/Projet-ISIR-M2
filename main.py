@@ -60,22 +60,22 @@ agent_parameters={Q_Agent:{'alpha':0.5,'beta':0.05,'gamma':0.95,'exploration':'s
             Kalman_agent:{'gamma':0.95, 'variance_ob':1,'variance_tr':40},
             KalmanMB_Agent:{'gamma':0.95,'epsilon':0.1,'H_update':3,'entropy_factor':0.1,'epis_factor':50,'alpha':0.2,'gamma_epis':0.5,'variance_ob':0.02,'variance_tr':0.5},
             QMB_Agent:{'gamma':0.95,'epsilon':0.01,'known_states':True},
-            Rmax_Agent:{'gamma':0.95, 'm':8,'Rmax':1,'known_states':True,'VI':50},
-            BEB_Agent:{'gamma':0.95,'beta':2.5,'known_states':True,'coeff_prior':5,'informative':True},
-            BEBLP_Agent:{'gamma':0.95,'beta':1.5,'step_update':10,'coeff_prior':0.001,'alpha':0.5},
-            RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':0.2,'m':0.5,'VI':50}}
+            Rmax_Agent:{'gamma':0.95, 'm':8,'Rmax':1,'known_states':True,'u_m':2},
+            BEB_Agent:{'gamma':0.95,'beta':2,'known_states':True,'coeff_prior':5,'informative':True},
+            BEBLP_Agent:{'gamma':0.95,'beta':2,'step_update':10,'coeff_prior':0.001,'alpha':1},
+            RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':0.2,'m':0.5}}
 
 
-nb_iters=20
-trials = 200
-max_step =30 
+nb_iters=1
+trials = 120
+max_step =30
 photos=[10,40,70,100,130,160,199]
 screen=0
 accuracy=0.01
-pas_VI=50
+pas_VI=25
 
 #agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent,'QA':Q_Agent,'KAS':Kalman_agent_sum,'KMB':KalmanMB_Agent}
-agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent}
+agents={'BEBLP':BEBLP_Agent}
 
 #environments=['Lopes_nostat_{0}'.format(num) for num in range(1,21),'Two_Step']+['D_{0}'.format(num) for num in range(1,21)]+['U_{0}'.format(num) for num in range(1,21)]+['UB_{0}'.format(num) for num in range(1,21)]
 
