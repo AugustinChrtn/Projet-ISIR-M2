@@ -14,7 +14,7 @@ def count_to_dirichlet(dictionnaire):
 
 class BEB_Agent:
 
-    def __init__(self,environment, gamma=0.95, beta=1,known_states=True,coeff_prior=0.01,informative=False):
+    def __init__(self,environment, gamma=0.95, beta=1,known_states=True,coeff_prior=0.01,informative=True):
         
         self.environment=environment
         self.gamma = gamma
@@ -60,7 +60,7 @@ class BEB_Agent:
         self.bonus[old_state][action]=self.beta/(1+self.prior_0[old_state][action])
                   
 
-        for i in range(50):
+        for i in range(10):
             for state_known in self.nSA:
                     for action_known in self.nSA[state_known]:
                         self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
@@ -102,3 +102,16 @@ class BEB_Agent:
                         self.prior_0[state_1][action]=len(self.states)*self.coeff_prior
                 self.bonus[state_1][action]=self.beta
                 self.Q[state_1][action]=(1+self.beta)/(1-self.gamma)
+                for state_2 in self.states:
+                    self.tSAS[state_1][action][state_2]=1/len(self.states)
+        #Below is the wrong prior version
+        """max_prior=0
+        for state_1 in self.states:
+            for action in self.environment.actions:
+                for state_2 in self.states:
+                    max_prior=max(max_prior,self.prior[state_1][action][state_2])
+        for state_1 in  self.states:
+            for action in self.environment.actions:
+                for state_2 in self.states:
+                    self.prior[state_1][action][state_2]=np.random.uniform(self.coeff_prior*1e-5,max_prior)
+                self.prior_0[state_1][action]=sum(self.prior[state_1][action].values())"""

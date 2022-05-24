@@ -55,10 +55,10 @@ class Rmax_Agent:
                                 self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
                     """
                     
-                    for i in range(50):
-                        for state_known in self.nSA.keys():
-                            for action_known in self.nSA[state_known].keys():
-                                self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+                    for i in range(10):
+                            for visited_state in self.nSA:
+                                for taken_action in self.nSA[visited_state]:
+                                    self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action]])
 
     
     def choose_action(self):
@@ -82,9 +82,17 @@ class Rmax_Agent:
         self.states=self.environment.states
         for state_1 in self.states:
             for action in self.environment.actions:
-                self.tSAS[state_1][action][state_1]=1
                 self.R[state_1][action]=self.Rmax
                 self.Q[state_1][action]=self.Rmax/(1-self.gamma)
                 self.max_visits[state_1][action]=self.m
+                for state_2 in self.states:
+                    self.tSAS[state_1][action][state_2]=1/len(self.states)
         for state in self.environment.uncertain_states:
-                self.max_visits[state][action]=self.u_m*self.m
+            for action in self.environment.actions:
+                self.max_visits[state][action]=self.u_m
+                #self.max_visits[state][action]=2**self.environment.entropy[state,action]
+        #Below is the wrong prior version
+        """for state in self.environment.states:
+            for action in self.environment.actions:
+                self.max_visits[state][action]=np.random.randint(self.m,self.u_m*self.m)"""
+        

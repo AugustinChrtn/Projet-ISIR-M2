@@ -12,13 +12,19 @@ def choice_dictionary(dictionary):
     values = list(dictionary.values())
     return random.choices(keys, weights=values)[0]
 
+def entropy(transitions):
+    value_entropy=0
+    for value in transitions.values():
+        if value>0:
+            value_entropy+=-value*np.log2(value)
+    return value_entropy
 
 class Lopes_nostat():
     def __init__(self,transitions,transitions2):
         self.height = 5
         self.width = 5
         self.grid = np.zeros((self.height,self.width))        
-        self.final_states={(2,4,STAY):1}
+        self.final_states={}
         self.values= np.array(create_matrix(self.width, self.height,[0.,0.,0.,0.,0.]))
         self.current_location = (0,0)     
         self.first_location=(0,0)
@@ -47,6 +53,8 @@ class Lopes_nostat():
 
         self.number_steps=0
         self.changed=False
+        
+        self.entropy={(state,action) : entropy(transitions[action][state]) for state in self.states for action in self.actions }
     
     def make_step(self, action):
         self.number_steps+=1

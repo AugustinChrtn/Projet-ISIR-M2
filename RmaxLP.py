@@ -80,10 +80,10 @@ class RmaxLP_Agent:
                         old_CV,old_variance=self.cross_validation(new_dict)
                         self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
                     
-                    for i in range(50):
-                            for state_known in self.nSA:
-                                for action_known in self.nSA[state_known]:
-                                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+                    for i in range(10):
+                            for visited_state in self.nSA:
+                                for taken_action in self.nSA[visited_state]:
+                                    self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action]])
                                 
     def choose_action(self):
         self.step_counter+=1
@@ -98,10 +98,11 @@ class RmaxLP_Agent:
         number_states=len(self.states)
         for state_1 in self.states:
             for action in self.environment.actions:
-                self.tSAS[state_1][action][state_1]=1
                 self.R[state_1][action]=self.Rmax
                 self.Q[state_1][action]=self.Rmax/(1-self.gamma)
                 self.LP[state_1][action]=np.log(number_states)
+                for state_2 in self.states:
+                    self.tSAS[state_1][action][state_2]=1/number_states
     
     def cross_validation(self,nSAS_SA):
         cv,v=0,[]
@@ -117,3 +118,21 @@ class RmaxLP_Agent:
         var=(v-cross_validation)**2
         variance_cv=np.sum(var)/cardinal
         return cross_validation,variance_cv
+        
+        """cv,v=0,[]
+        prior=0.04
+        sum_count=sum(nSAS_SA.values())
+        sum_prior=sum_count + 25*prior
+        for next_state,next_state_count in nSAS_SA.items():
+            if next_state_count-1==0:
+                log_value=np.log(prior/sum_prior)
+            else :
+                value=(next_state_count-1)/(sum_prior-1)
+                log_value=np.log(value)
+            cv-=next_state_count*log_value
+            v+=[-log_value]*next_state_count
+        v=np.array(v)
+        cross_validation =cv/sum_count
+        var=(v-cross_validation)**2
+        variance_cv=np.sum(var)/sum_count
+        return cross_validation,variance_cv"""

@@ -64,6 +64,7 @@ class Graphique():
 					                 self.color,[(self.MARGIN + self.WIDTH)*col+self.MARGIN,
 					                 (self.MARGIN + self.HEIGHT)*row+self.MARGIN,self.WIDTH,self.HEIGHT])
 
+        if finals=={}: finals = {(2,4,1):1}
         max_value=max(finals.values())
         for key,value in finals.items():
             if key[2] != STAY:

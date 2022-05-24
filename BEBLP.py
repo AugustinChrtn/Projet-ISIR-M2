@@ -85,7 +85,7 @@ class BEBLP_Agent:
             self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
             self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
         
-        for i in range(50):
+        for i in range(10):
             for state_known in self.nSAS:
                 for action_known in self.nSAS[state_known]:
                     self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
@@ -107,6 +107,7 @@ class BEBLP_Agent:
             for action in self.environment.actions:
                 for state_2 in self.states:
                     self.prior[state_1][action][state_2]=self.coeff_prior
+                    self.tSAS[state_1][action][state_2]=1/number_states
                 self.Q[state_1][action]=(1+self.beta)/(1-self.gamma)
                 self.LP[state_1][action]=np.log(number_states)
                 self.bonus[state_1][action]=self.beta/(1+1/np.sqrt(self.LP[state_1][action]))
@@ -149,7 +150,7 @@ class BEBLP_Agent:
         cv,v=0,[]
         for next_state,next_state_count in nSAS_SA.items():
             value=(next_state_count-1)/sum(nSAS_SA.values())
-            if value ==0: log_value=-1
+            if value ==0: log_value=-2
             else: log_value=np.log(value)
             cv-=next_state_count*log_value
             v+=[-log_value]*next_state_count

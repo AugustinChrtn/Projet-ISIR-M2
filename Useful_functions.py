@@ -25,7 +25,7 @@ from Kalman import Kalman_agent
 from Kalman_sum import Kalman_agent_sum
 from Rmax import Rmax_Agent
 from BEB import BEB_Agent
-from BEBLP import BEBLP_Agent
+from BEBLP2 import BEBLP_Agent
 from RmaxLP import RmaxLP_Agent
 from greedyMB import QMB_Agent
 from Representation import Graphique
@@ -50,7 +50,7 @@ def play(environment, agent, trials=200, max_step=500, screen=0,photos=[10,20,50
                     pol_updated=True
                     val_iteration,_=value_iteration(environment,agent.gamma,accuracy)
             if agent.step_counter%pas_VI==0:
-                policy_value_error.append(policy_evaluation(environment,get_policy(agent),agent.gamma,accuracy)[environment.first_location]-val_iteration[environment.first_location]) 
+                policy_value_error.append(policy_evaluation(environment,get_policy_2(agent,environment,agent.gamma,accuracy),agent.gamma,accuracy)[environment.first_location]-val_iteration[environment.first_location]) 
             old_state = environment.current_location
             action = agent.choose_action() 
             reward , terminal = environment.make_step(action) #reward and if state is terminal
@@ -76,18 +76,21 @@ for number_world in range(1,21):
     transitions_U=np.load('Mondes/Transitions_'+str(number_world)+'_U.npy',allow_pickle=True)
     transitions_B=np.load('Mondes/Transitions_'+str(number_world)+'_B.npy',allow_pickle=True)
     transitions_lopes=np.load('Mondes/Transitions_Lopes_non_stat'+str(number_world)+'.npy',allow_pickle=True)
+    transitions_lopes_i_variable=np.load('Mondes/Transitions_Lopes_'+str(number_world)+'.npy',allow_pickle=True)
     environments_parameters["D_{0}".format(number_world)] = {'world':world}
     environments_parameters["U_{0}".format(number_world)] = {'world':world,'transitions':transitions}
     environments_parameters["DB_{0}".format(number_world)] = {'world':world,'world2':world_2}
     environments_parameters["UU_{0}".format(number_world)] = {'world':world,'transitions':transitions,'transitions_U':transitions_U}
     environments_parameters["UB_{0}".format(number_world)] = {'world':world,'world2':world_2,'transitions':transitions,'transitions_B':transitions_B} 
     environments_parameters["Lopes_nostat_{0}".format(number_world)]={'transitions':np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True),'transitions2':transitions_lopes}
+    environments_parameters["Lopes_{0}".format(number_world)]={'transitions':transitions_lopes_i_variable}
     all_environments["D_{0}".format(number_world)]=Deterministic_State
     all_environments["U_{0}".format(number_world)]=Uncertain_State
     all_environments["DB_{0}".format(number_world)]=Deterministic_no_stat
     all_environments["UB_{0}".format(number_world)]=Uncertain_State_B
     all_environments["UU_{0}".format(number_world)]=Uncertain_State_U
     all_environments["Lopes_nostat_{0}".format(number_world)]=Lopes_nostat
+    all_environments["Lopes_{0}".format(number_world)]=Lopes_State
 
 
 
@@ -237,7 +240,7 @@ def convergence(array,longueur=30,variation=0.2,absolu=0.1,artefact=3):
 
 def value_iteration(environment,gamma,accuracy):
     V={state:1 for state in environment.states}
-    action={state:0 for state in environment.states}
+    policy={state:0 for state in environment.states}
     delta=accuracy+1
     while delta > accuracy :
         delta=0
@@ -245,8 +248,23 @@ def value_iteration(environment,gamma,accuracy):
             value_V=V[state]
             V[state]=np.max([np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
             delta=max(delta,np.abs(value_V-V[state]))
-            action[state]=np.argmax([np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
-    return V,action
+    for state,value in V.items():
+        policy[state]=np.argmax([np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
+    return V,policy
+
+def value_iteration2(environment,gamma,accuracy):
+    V={state:1 for state in environment.states}
+    policy={state:0 for state in environment.states}
+    delta=accuracy+1
+    while delta > accuracy :
+        delta=0
+        for state,value in V.items():
+            value_V=V[state]
+            V[state]=np.max([np.sum([environment.transitions[action][state][new_state]*(environment.values[new_state]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
+            delta=max(delta,np.abs(value_V-V[state]))
+    for state,value in V.items():
+        policy[state]=np.argmax([np.sum([environment.transitions[action][state][new_state]*(environment.values[new_state]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
+    return V,policy
 
 def plot_VI(environment,gamma,accuracy): #only in gridworlds
     V,action=value_iteration(environment,gamma,accuracy)
@@ -262,7 +280,7 @@ def plot_VI(environment,gamma,accuracy): #only in gridworlds
     cell_height = 45
     cell_margin = 5
     gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.final_states,init_loc,V_2,action)
-    #pygame.image.save(gridworld.screen,"Images/Optimal policy/VI_"+type(environment).__name__+".png")
+    pygame.image.save(gridworld.screen,"Images/Optimal policy/VI_test"+type(environment).__name__+".png")
     return gridworld
 
 def policy_evaluation(environment,policy,gamma,accuracy):
@@ -280,6 +298,22 @@ def policy_evaluation(environment,policy,gamma,accuracy):
             delta=max(delta,np.abs(value_V-V[state]))
     return V
 
+
+def policy_evaluation2(environment,policy,gamma,accuracy):
+    V={state:1 for state in environment.states}
+    delta=accuracy+1
+    for state in V.keys():
+        if state not in policy.keys():
+            policy[state]=np.random.choice(environment.actions)
+    while delta > accuracy :
+        delta=0
+        for state,value in V.items():
+            value_V=V[state]
+            actions=policy[state]
+            V[state]=np.sum([probability_action*np.sum([environment.transitions[action][state][new_state]*(environment.values[new_state]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action,probability_action in actions.items()])
+            delta=max(delta,np.abs(value_V-V[state]))
+    return V
+
 def get_policy(agent):
     action_every_state=dict()
     for state in agent.Q.keys():
@@ -293,6 +327,25 @@ def get_policy(agent):
             action_every_state[state]={other_action: agent.epsilon/5 for other_action in random_actions}
             action_every_state[state][best_action]=1-agent.epsilon+agent.epsilon/5
     return action_every_state
+
+def get_policy_2(agent,environment,gamma,accuracy):
+    transitions=agent.tSAS
+    rewards=agent.R
+    V={state:1 for state in transitions}
+    policy=dict()
+    delta=accuracy+1
+    while delta > accuracy :
+        delta=0
+        for state,value in V.items():
+            value_V=V[state]
+            V[state]=np.max([np.sum([transitions[state][action][new_state]*(rewards[state][action]+gamma*V[new_state]) for new_state in transitions[state][action].keys()]) for action in environment.actions])
+            delta=max(delta,np.abs(value_V-V[state]))
+    for state,value in V.items():
+        policy[state]={np.argmax([np.sum([transitions[state][action][new_state]*(rewards[state][action]+gamma*V[new_state]) for new_state in transitions[state][action]]) for action in environment.actions]):1}
+    return policy
+
+    
+    
 
 ##Optimal policies ###
 
@@ -319,7 +372,7 @@ def compute_optimal_policies(environments_parameters=environments_parameters):
 environment_names=['Lopes']
 
 def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=5,screen=0,pas_VI=25):
-    BEB_parameters={(beta,prior):{'gamma':0.95,'beta':beta,'known_states':True,'coeff_prior':prior} for beta in betas for prior in priors}
+    BEB_parameters={(beta,prior):{'gamma':0.95,'beta':beta,'known_states':True,'coeff_prior':prior,'informative':True} for beta in betas for prior in priors}
     pol_error={(beta,prior):[] for beta in betas for prior in priors}
     for name_environment in environment_names:   
         print(name_environment)
@@ -332,7 +385,7 @@ def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accura
                 _,_,policy_value_error= play(environment,BEB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
                 pol_error[beta,prior].append(policy_value_error)
     min_length_param={(beta,prior):np.min([len(pol_error[beta,prior][i]) for i in range(len(environment_names))]) for beta in betas for prior in priors}
-    mean_pol_error={(beta,prior): np.average([pol_error[beta,prior][:min_length_param[beta,prior]]],axis=0) for beta in betas for prior in priors}
+    mean_pol_error={(beta,prior): np.average([pol_error[beta,prior][i][:min_length_param[beta,prior]] for i in range(len(environment_names))],axis=0) for beta in betas for prior in priors}
 
     return mean_pol_error
 
@@ -353,7 +406,7 @@ def fitting_RALP(environment_names,alphas,ms,trials = 200,max_step = 30,accuracy
 
                 pol_error[alpha,m].append(policy_value_error)
     min_length_param={(alpha,m):np.min([len(pol_error[alpha,m][i]) for i in range(len(environment_names))]) for alpha in alphas for m in ms}
-    mean_pol_error={(alpha,m): np.average([pol_error[alpha,m][:min_length_param[alpha,m]]],axis=0) for alpha in alphas for m in ms}
+    mean_pol_error={(alpha,m): np.average([pol_error[alpha,m][i][:min_length_param[alpha,m]] for i in range(len(environment_names))],axis=0) for alpha in alphas for m in ms}
     return mean_pol_error
 
 
@@ -372,7 +425,7 @@ def fitting_QMB(environment_names,epsilons,trials=50,max_step=30,accuracy=0.01,s
                     
             pol_error[epsilon].append(policy_value_error)
     min_length_param={epsilon:np.min([len(pol_error[epsilon][i]) for i in range(len(environment_names))]) for epsilon in epsilons}
-    mean_pol_error={epsilon: np.average([pol_error[epsilon][:min_length_param[epsilon]]],axis=0) for epsilon in epsilons}
+    mean_pol_error={epsilon: np.average([pol_error[epsilon][i][:min_length_param[epsilon]] for i in range(len(environment_names))],axis=0) for epsilon in epsilons}
     return mean_pol_error
 
 
@@ -390,7 +443,7 @@ def fitting_BEBLP(environment_names,betas,alphas,trials = 300,max_step = 30,accu
                 _,_,policy_value_error= play(environment,BEBLP,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
                 pol_error[beta,alpha].append(policy_value_error)
     min_length_param={(beta,alpha):np.min([len(pol_error[beta,alpha][i]) for i in range(len(environment_names))]) for beta in betas for alpha in alphas}
-    mean_pol_error={(beta,alpha): np.average([pol_error[beta,alpha][:min_length_param[beta,alpha]]],axis=0) for beta in betas for alpha in alphas}
+    mean_pol_error={(beta,alpha): np.average([pol_error[beta,alpha][i][:min_length_param[beta,alpha]] for i in range(len(environment_names))],axis=0) for beta in betas for alpha in alphas}
 
     return mean_pol_error
 
@@ -409,7 +462,8 @@ def fitting_RA(environment_names,u_ms,ms,trials = 200,max_step = 30,accuracy=.05
 
                 pol_error[m,u_m].append(policy_value_error)
     min_length_param={(m,u_m):np.min([len(pol_error[m,u_m][i]) for i in range(len(environment_names))]) for u_m in u_ms for m in ms}
-    mean_pol_error={(m,u_m): np.average([pol_error[m,u_m][:min_length_param[m,u_m]]],axis=0) for u_m in u_ms for m in ms}
+    print(min_length_param)
+    mean_pol_error={(m,u_m): np.average([pol_error[m,u_m][i][:min_length_param[m,u_m]] for i in range(len(environment_names))],axis=0) for u_m in u_ms for m in ms}
     return mean_pol_error
 
 
@@ -417,18 +471,21 @@ def fitting_RA(environment_names,u_ms,ms,trials = 200,max_step = 30,accuracy=.05
 
 pas_VI=25
 accuracy=0.01
-trials=150
+trials=84
 max_step=30
 
 
-environment_names=['Lopes']*1
+environment_names=['Lopes_{0}'.format(num) for num in range(1,6)]
 
+temps=str(time.time())
+
+"""
 epsilons=[0.005,0.01,0.02,0.05,0.1]
 a=fitting_QMB(environment_names,epsilons,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
-
+np.save('Parameter fitting/e-greedy'+temps,a)
 plt.figure()
 for epsilon,mean_pol in a.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='epsilon='+str(epsilon),marker='o')
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='epsilon='+str(epsilon))
 plt.title('e-greedy_Lopes')
 plt.grid(linestyle='--')
 plt.legend()
@@ -439,49 +496,58 @@ plt.show()
 betas=[1,2,3]
 priors=[1,3,5]
 b=fitting_BEB(environment_names,betas=betas,priors=priors,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
-
+np.save('Parameter fitting/BEB'+temps,b)
 plt.figure()
 for (beta,prior),mean_pol in b.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='beta='+str(beta)+', prior='+str(prior),marker='o')
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='beta='+str(beta)+', prior='+str(prior))
 plt.title('BEB_Lopes')
 plt.grid(linestyle='--')
 plt.legend()
 plt.savefig('Parameter fitting/BEB_Lopes.png')
 plt.show()
 
-alphas=[0.1,0.5,1]
-ms=[0.4,0.8,1.2]
+alphas=[1,2,3]
+ms=[0.5,1,1.5]
 c=fitting_RALP(environment_names,alphas=alphas,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+np.save('Parameter fitting/RALP'+temps,c)
+
+
 plt.figure()
 for (alpha,m),mean_pol in c.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='alpha='+str(alpha)+', m='+str(m),marker='o')
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='alpha='+str(alpha)+', m='+str(m))
 plt.title('RmaxLP_Lopes')
 plt.grid(linestyle='--')
 plt.legend()
 plt.savefig('Parameter fitting/RmaxLP_Lopes.png')
 plt.show()
 
-alphas=[0.1,0.5,1]
+
+alphas=[1,2,3]
 betas=[1,2,3]
 d=fitting_BEBLP(environment_names,alphas=alphas,betas=betas,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+np.save('Parameter fitting/BEBLP'+temps,d)
+
 plt.figure()
-for (alpha,beta),mean_pol in d.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='alpha='+str(alpha)+', beta='+str(beta),marker='o')
+for (beta,alpha),mean_pol in d.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='alpha='+str(alpha)+', beta='+str(beta))
 plt.title('BEBLP_Lopes')
 plt.grid(linestyle='--')
 plt.legend()
 plt.savefig('Parameter fitting/BEBLP_Lopes.png')
 plt.show()
 
-u_ms=[1,2,3]
-ms=[4,6,8]
+
+u_ms=[2,3,4]
+ms=[2,3,4]
 e=fitting_RA(environment_names,u_ms=u_ms,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+np.save('Parameter fitting/RA'+temps,e)
+
 plt.figure()
 for (m,u_m),mean_pol in e.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol[0]))],mean_pol[0],label='m='+str(m)+', u_m='+str(u_m),marker='o')
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='m='+str(m)+', u_m='+str(u_m))
 plt.title('Rmax_Lopes')
 plt.grid(linestyle='--')
 plt.legend()
 plt.savefig('Parameter fitting/Rmax_Lopes.png')
 plt.show()
-
+"""

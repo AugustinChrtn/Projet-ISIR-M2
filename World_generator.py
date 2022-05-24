@@ -393,7 +393,7 @@ def transition_Lopes():
                     for row in range(5):
                         for col in range(5):
                             dict_transitions[action][height][width][(row,col)]=probas[row][col]
-        np.save('Mondes/Transitions_Lopes.npy',dict_transitions)
+        return dict_transitions
         
 def transition_Lopes_2():
         dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
@@ -421,7 +421,7 @@ def transition_Lopes_2():
                     probas[max_ind[j]],probas[ind]=probas[ind],probas[max_ind[j]]
                     for key in probas.keys() :
                             dict_transitions[action][height][width][key]=probas[key]
-        np.save('Mondes/Transitions_Lopes.npy',dict_transitions)
+        return dict_transitions
         
         
 def transition_Lopes_3():
@@ -459,12 +459,12 @@ def transition_Lopes_3():
                         del probas[(height,width+1)]
                     for key in probas.keys() :
                             dict_transitions[action][height][width][key]=probas[key]
-        np.save('Mondes/Transitions_Lopes.npy',dict_transitions)
+        return dict_transitions
 
 def non_stat_Lopes_article(nombre=20):
     for i in range(nombre):
         transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
-        optimal_path=[(0,0),(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4),(2,4)]
+        optimal_path=[(0,0),(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4)]
         
         index_changed=np.random.randint(len(optimal_path))
         state_to_change=optimal_path[index_changed]
@@ -487,7 +487,7 @@ def non_stat_Lopes_article(nombre=20):
 def non_stat_Lopes_optimal(nombre=20):
     for i in range(nombre):
         transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
-        optimal_path=[(0,0),(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4),(2,4)]
+        optimal_path=[(0,0),(1,0),(2,0),(3,0),(3,1),(3,2),(3,3),(3,4)]
         
         for state_to_change in optimal_path:
             liste_rotation=[j for j in range(5)]
@@ -507,7 +507,7 @@ def non_stat_Lopes_optimal(nombre=20):
         
 def non_stat_Lopes(nombre=20):
     for i in range(nombre):
-        transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
+        transitions=np.load('Mondes/Transitions_Lopes_'+str(i+1)+'.npy',allow_pickle=True)
         all_states=[(i,j) for i in range(5) for j in range(5)]
         
         for state_to_change in all_states:
@@ -519,22 +519,139 @@ def non_stat_Lopes(nombre=20):
         np.save('Mondes/Transitions_Lopes_non_stat'+str(i+1)+'.npy',transitions)
 
 
+def mean_transition_Lopes():
+        dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
+        uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
+        for action in [UP,DOWN,LEFT,RIGHT,STAY]:
+            for height in range(5):
+                for width in range(5):
+                    if (height,width) not in uncertain_states:alpha=0.1
+                    else : alpha=1
+                    if action == UP and height-1 >=0: ind=(height-1,width)
+                    elif action == DOWN and height+1 <5: ind = (height+1,width)
+                    elif action == LEFT and width-1 >=0: ind = (height,width-1)
+                    elif action == RIGHT and width+1 <5: ind = (height,width+1)
+                    else : ind=(height,width) 
+                    etats=[(height,width), (height-1,width),(height+1,width),(height,width-1),(height,width+1)]
+                    if height-1 <0: etats.remove((height-1,width))
+                    if height+1 ==5: etats.remove((height+1,width))
+                    if width-1 <0:  etats.remove((height,width-1))
+                    if width+1==5:  etats.remove((height,width+1))
+                    values=np.zeros(len(etats))
+                    for i in range(1000):
+                        diri=np.random.dirichlet([alpha]*len(etats))
+                        index_max_diri=np.argmax(diri)
+                        diri[0],diri[index_max_diri]=diri[index_max_diri],diri[0]
+                        values+=diri
+                    values=values/1000
+                    probas={etats[i]:values[i] for i in range(len(etats))}
+                    maxValue = max(probas.values())
+                    max_ind = [k for k, v in probas.items() if v == maxValue]
+                    j=np.random.randint(len(max_ind))                   
+                    probas[max_ind[j]],probas[ind]=probas[ind],probas[max_ind[j]]
+                    for key in probas.keys() :
+                            dict_transitions[action][height][width][key]=probas[key]
+        np.save('Mondes/Transitions_Lopes_opti.npy',dict_transitions)
+        
+def mean_transition_Lopes_2():
+        dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
+        uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
+        for action in [UP,DOWN,LEFT,RIGHT,STAY]:
+            for height in range(5):
+                for width in range(5):
+                    if (height,width) not in uncertain_states:alpha=0.1
+                    else : alpha=2
+                    if action == UP and height-1 >=0: ind=(height-1,width)
+                    elif action == DOWN and height+1 <5: ind = (height+1,width)
+                    elif action == LEFT and width-1 >=0: ind = (height,width-1)
+                    elif action == RIGHT and width+1 <5: ind = (height,width+1)
+                    else : ind=(height,width) 
+                    etats=[(height,width), (height-1,width),(height+1,width),(height,width-1),(height,width+1)]
+                    values=np.zeros(len(etats))
+                    for i in range(1000):
+                        diri=np.random.dirichlet([alpha]*len(etats))
+                        index_max_diri=np.argmax(diri)
+                        diri[0],diri[index_max_diri]=diri[index_max_diri],diri[0]
+                        values+=diri
+                    values=values/1000
+                    probas={etats[i]:values[i] for i in range(len(etats))}
+                    maxValue = max(probas.values())
+                    max_ind = [k for k, v in probas.items() if v == maxValue]
+                    j=np.random.randint(len(max_ind))                   
+                    probas[max_ind[j]],probas[ind]=probas[ind],probas[max_ind[j]]
+                    if height-1 <0: 
+                        probas[(height,width)]+=probas[(height-1,width)]
+                        del probas[(height-1,width)]
+                    if height+1 ==5:
+                        probas[(height,width)]+=probas[(height+1,width)]
+                        del probas[(height+1,width)]
+                    if width-1 <0:
+                        probas[(height,width)]+=probas[(height,width-1)]
+                        del probas[(height,width-1)]
+                    if width+1==5:
+                        probas[(height,width)]+=probas[(height,width+1)]
+                        del probas[(height,width+1)]
+                    for key in probas.keys() :
+                            dict_transitions[action][height][width][key]=probas[key]
+        np.save('Mondes/Transitions_Lopes_opti.npy',dict_transitions)
+
+def new_transition_Lopes():
+        dict_transitions=[[list({} for i in range(5))for i in range(5)] for i in range(5)]
+        uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
+        for action in [UP,DOWN,LEFT,RIGHT,STAY]:
+            for height in range(5):
+                for width in range(5):
+                    if (height,width) not in uncertain_states:alpha=0.1
+                    else : alpha=1
+                    probas=np.zeros(25)
+                    for i in range(10000):
+                        diri=np.random.dirichlet([alpha]*25)
+                        index_max_diri=np.argmax(diri)
+                        diri[0],diri[index_max_diri]=diri[index_max_diri],diri[0]
+                        probas+=diri
+                    probas=probas/10000
+                    probas=probas.reshape(5,5)
+                    if action == UP and height-1 >=0: index=(height-1,width)
+                    elif action == DOWN and height+1 <5: index = (height+1,width)
+                    elif action == LEFT and width-1 >=0: index = (height,width-1)
+                    elif action == RIGHT and width+1 <5: index = (height,width+1)
+                    else : index=(height,width) 
+                    max_index=np.unravel_index(probas.argmax(),probas.shape)
+                    probas[max_index],probas[index]=probas[index],probas[max_index]
+                    for row in range(5):
+                        for col in range(5):
+                            dict_transitions[action][height][width][(row,col)]=probas[row][col]
+        np.save('Mondes/Transitions_Lopes_opti.npy',dict_transitions)
 
 
-    
-"""from Useful_functions import value_iteration
+def best_policy_average():
+    pass
+
+
+from Useful_functions import value_iteration
 
 def valid_Lopes():
-    valid=False
-    count=0
-    while not valid and count <500: 
+    for count in range(500):
         print(count)
-        transitions=np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)
+        transitions=np.array(transition_Lopes_3())
         environment=Lopes_State(transitions)
         _,policy=value_iteration(environment,0.95,0.01)
-        if policy[0,0]==1 and policy[1,0]==1 and policy[2,0]==1 and policy[3,0]==3 and policy[3,1]==3 and policy[3,2]==3 and policy[3,3]==3 and policy[3,4]==0 and policy[2,4]==4:
-            valid =True
-        else : 
-            count+=1
-            transition_Lopes_2()"""
+        if policy[0,0]==1 and policy[1,0]==1 and policy[2,0]==1 and policy[3,0]==3 and policy[3,1]==3 and policy[3,2]==3 and policy[3,3]==3 and policy[3,4]==0 :
+            return transitions
             
+def proportion_valid_Lopes():
+    count=0
+    for i in range(5000):
+        if i%100==0: print(i)
+        transitions=np.array(transition_Lopes_3())
+        environment=Lopes_State(transitions)
+        _,policy=value_iteration(environment,0.95,0.01)
+        if policy[0,0]==1 and policy[1,0]==1 and policy[2,0]==1 and policy[3,0]==3 and policy[3,1]==3 and policy[3,2]==3 and policy[3,3]==3 and policy[3,4]==0 :
+            count+=1
+    print(count/5000)
+
+def generer_20_Lopes_valid(): #Changer Lopess en Lopes
+    for i in range(1,2):
+        transitions=valid_Lopes()
+        np.save('Mondes/Transitions_Lopess_'+str(i)+'.npy',transitions)
+        

@@ -25,7 +25,7 @@ from Rmax import Rmax_Agent
 from BEB import BEB_Agent
 from KalmanMB import KalmanMB_Agent
 from greedyMB import QMB_Agent
-from BEBLP import BEBLP_Agent
+from BEBLP2 import BEBLP_Agent
 from RmaxLP import RmaxLP_Agent
 
 
@@ -39,18 +39,21 @@ for number_world in range(1,21):
     transitions_U=np.load('Mondes/Transitions_'+str(number_world)+'_U.npy',allow_pickle=True)
     transitions_B=np.load('Mondes/Transitions_'+str(number_world)+'_B.npy',allow_pickle=True)
     transitions_lopes=np.load('Mondes/Transitions_Lopes_non_stat'+str(number_world)+'.npy',allow_pickle=True)
+    transitions_lopes_i_variable=np.load('Mondes/Transitions_Lopes_'+str(number_world)+'.npy',allow_pickle=True)
     environments_parameters["D_{0}".format(number_world)] = {'world':world}
     environments_parameters["U_{0}".format(number_world)] = {'world':world,'transitions':transitions}
     environments_parameters["DB_{0}".format(number_world)] = {'world':world,'world2':world_2}
     environments_parameters["UU_{0}".format(number_world)] = {'world':world,'transitions':transitions,'transitions_U':transitions_U}
     environments_parameters["UB_{0}".format(number_world)] = {'world':world,'world2':world_2,'transitions':transitions,'transitions_B':transitions_B} 
     environments_parameters["Lopes_nostat_{0}".format(number_world)]={'transitions':np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True),'transitions2':transitions_lopes}
+    environments_parameters["Lopes_{0}".format(number_world)]={'transitions':transitions_lopes_i_variable}
     all_environments["D_{0}".format(number_world)]=Deterministic_State
     all_environments["U_{0}".format(number_world)]=Uncertain_State
     all_environments["DB_{0}".format(number_world)]=Deterministic_no_stat
     all_environments["UB_{0}".format(number_world)]=Uncertain_State_B
     all_environments["UU_{0}".format(number_world)]=Uncertain_State_U
     all_environments["Lopes_nostat_{0}".format(number_world)]=Lopes_nostat
+    all_environments["Lopes_{0}".format(number_world)]=Lopes_State
 
 seed=57
 np.random.seed(seed)
@@ -58,16 +61,16 @@ random.seed(57)
 agent_parameters={Q_Agent:{'alpha':0.5,'beta':0.05,'gamma':0.95,'exploration':'softmax'},
             Kalman_agent_sum:{'gamma':0.98,'variance_ob':1,'variance_tr':50,'curiosity_factor':1},
             Kalman_agent:{'gamma':0.95, 'variance_ob':1,'variance_tr':40},
-            KalmanMB_Agent:{'gamma':0.95,'epsilon':0.1,'H_update':3,'entropy_factor':0.1,'epis_factor':50,'alpha':0.2,'gamma_epis':0.5,'variance_ob':0.02,'variance_tr':0.5},
-            QMB_Agent:{'gamma':0.95,'epsilon':0.01,'known_states':True},
-            Rmax_Agent:{'gamma':0.95, 'm':8,'Rmax':1,'known_states':True,'u_m':2},
-            BEB_Agent:{'gamma':0.95,'beta':2,'known_states':True,'coeff_prior':5,'informative':True},
-            BEBLP_Agent:{'gamma':0.95,'beta':2,'step_update':10,'coeff_prior':0.001,'alpha':1},
-            RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':0.2,'m':0.5}}
+            KalmanMB_Agent:{'gamma':0.95,'H_update':3,'entropy_factor':0.1,'epis_factor':50,'alpha':0.2,'gamma_epis':0.5,'variance_ob':0.02,'variance_tr':0.5,'known_states':True},
+            QMB_Agent:{'gamma':0.95,'epsilon':0.1,'known_states':True},
+            Rmax_Agent:{'gamma':0.95, 'm':7,'Rmax':1,'known_states':True,'u_m':16},
+            BEB_Agent:{'gamma':0.95,'beta':3,'known_states':True,'coeff_prior':4,'informative':True},
+            BEBLP_Agent:{'gamma':0.95,'beta':3,'step_update':10,'coeff_prior':0.01,'alpha':3},
+            RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':2,'m':1.4}}
 
 
 nb_iters=1
-trials = 120
+trials = 84
 max_step =30
 photos=[10,40,70,100,130,160,199]
 screen=0
@@ -75,12 +78,12 @@ accuracy=0.01
 pas_VI=25
 
 #agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent,'QA':Q_Agent,'KAS':Kalman_agent_sum,'KMB':KalmanMB_Agent}
-agents={'BEBLP':BEBLP_Agent}
+agents={'RALP':RmaxLP_Agent}
 
-#environments=['Lopes_nostat_{0}'.format(num) for num in range(1,21),'Two_Step']+['D_{0}'.format(num) for num in range(1,21)]+['U_{0}'.format(num) for num in range(1,21)]+['UB_{0}'.format(num) for num in range(1,21)]
+#environments=['Lopes_{0}'.format(num) for num in range(1,21)]+['Lopes_nostat_{0}'.format(num) for num in range(1,21)]+['D_{0}'.format(num) for num in range(1,21)]+['U_{0}'.format(num) for num in range(1,21)]+['UB_{0}'.format(num) for num in range(1,21)]
 
-names_env=['Lopes']
-
+names_env = ['Lopes_{0}'.format(num) for num in range(1,2)]
+    
 rewards={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
 steps={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
 exploration={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
@@ -159,11 +162,11 @@ for name_agent in agents.keys():
 
     
 
-rename={'RA':'R-max','BEB':'BEB','BEBLP':'ζ-EB','RALP':'ζ-R-max','QMB':'Ɛ-greedy'}
-colors={'RA':'royalblue','RALP':'royalblue','QMB':'red','BEB':'black','BEBLP':'black'}
-markers={'RA':'^','RALP':'o','BEB':'x','BEBLP':'*','QMB':'s'}
-linewidths={'RA':'0.75','RALP':'1.25','BEB':'0.75','BEBLP':'1.25','QMB':'0.75'}
-marker_sizes={'RA':'3','RALP':'3','BEB':'3','BEBLP':'3','QMB':'3'}
+rename={'RA':'R-max','BEB':'BEB','BEBLP':'ζ-EB','RALP':'ζ-R-max','QMB':'Ɛ-greedy','KMB':'KMB'}
+colors={'RA':'royalblue','RALP':'royalblue','QMB':'red','BEB':'black','BEBLP':'black','KMB':'green'}
+markers={'RA':'^','RALP':'o','BEB':'x','BEBLP':'*','QMB':'s','KMB':'P'}
+linewidths={'RA':'0.75','RALP':'1.25','BEB':'0.75','BEBLP':'1.25','QMB':'0.75','KMB':'1'}
+marker_sizes={'RA':'3','RALP':'3','BEB':'3','BEBLP':'3','QMB':'3','KMB':'3'}
 temps=str(round(time.time()))
 fig=plt.figure(dpi=1200)
 ax = fig.add_subplot(1, 1, 1)
@@ -175,7 +178,7 @@ plt.xlabel("Steps")
 plt.ylabel("Policy value error")
 plt.grid(linestyle='--')
 plt.legend()
-plt.savefig('Results/'+temps+'.png')
+plt.savefig('Results/'+temps+names_env[0]+'.png')
 plt.show()
 
 
