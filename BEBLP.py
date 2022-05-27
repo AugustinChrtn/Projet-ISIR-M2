@@ -56,35 +56,29 @@ class BEBLP_Agent:
         self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
         self.last_k[old_state][action][self.nSA[old_state][action]%self.step_update]=new_state
         #Ajout du bonus qui dépend du nombre de passages
-        """
-        if self.LP[old_state][action]<0.9:
-            if(old_state,action) not in self.known_state_action:
-                self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
-                self.known_state_action.append((old_state,action))
-                for i in range(50):
-                    for state_known,action_known in self.known_state_action:
-                        self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
-        else : 
-            if (old_state,action) in self.known_state_action: self.known_state_action.remove((old_state,action))     
-        """
-        if self.nSA[old_state][action]<self.step_update:
-            new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
-            self.LP[old_state][action]=new_CV+self.alpha*np.sqrt(new_variance)
-            self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
-            
+
+        """if self.nSA[old_state][action]<self.step_update:
+            new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action],self.prior[old_state][action])
+            self.LP[old_state][action]=max(new_CV+self.alpha*np.sqrt(new_variance),0.001)
+            self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))"""
+        
+        
         if self.nSA[old_state][action]>self.step_update:
-            new_dict={}
-            for k,v in self.nSAS[old_state][action].items():
-                new_dict[k]=v
+            new_dict_nSAS,new_dict_prior={k:v for k,v in self.nSAS[old_state][action].items()},{k:v for k,v in self.prior[old_state][action].items()}       
             for last_seen_state in self.last_k[old_state][action]:
-                new_dict[last_seen_state]-=1
-                if new_dict[last_seen_state]==0:
-                    del new_dict[last_seen_state]
-            new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
-            old_CV,old_variance=self.cross_validation(new_dict)
+                new_dict_nSAS[last_seen_state]-=1
+                new_dict_prior[last_seen_state]-=1
+                if new_dict_nSAS[last_seen_state]==0:
+                    del new_dict_nSAS[last_seen_state]
+            new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action],self.prior[old_state][action])
+            old_CV,old_variance=self.cross_validation(new_dict_nSAS,new_dict_prior)
             self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
             self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
-        
+            """if old_state==(0,0) and action==1:
+                print(old_CV,new_CV,new_variance)
+                print(self.LP[old_state][action],self.bonus[old_state][action])
+                print("")
+            """
         for i in range(10):
             for state_known in self.nSAS:
                 for action_known in self.nSAS[state_known]:
@@ -112,28 +106,39 @@ class BEBLP_Agent:
                 self.LP[state_1][action]=np.log(number_states)
                 self.bonus[state_1][action]=self.beta/(1+1/np.sqrt(self.LP[state_1][action]))
                 
-    def cross_validation(self,nSAS_SA): 
+    def cross_validation(self,nSAS_SA,prior_SA): 
         """cv,v=0,[]
-        for key,value in nSAS_SA.items():
-            for i in range(value):
-                keys,values=[],[]
-                for next_state, next_state_count in prior.items():
-                        keys.append(next_state)
-                        values.append(next_state_count)
-                        if next_state==key:
-                            values[-1]-=1
-                values=np.random.dirichlet(values)
-                for j in range(len(keys)):
-                    if keys[j]==key:
-                        cv-=np.log(values[j])
-                        v.append(-np.log(values[j]))
+        for next_state,next_state_count in nSAS_SA.items():
+            prior_SA[next_state]-=1
+            for i in range(next_state_count):
+                values=count_to_dirichlet(prior_SA)
+                if values[next_state]<1e-10:
+                    values[next_state]=1e-10
+                cv-=np.log(values[next_state])
+                v.append(-np.log(values[next_state]))
+            prior_SA[next_state]+=1
         v=np.array(v)
         cardinal=sum(nSAS_SA.values())
         cross_val =cv/cardinal
         v=(v-cross_val)**2
         variance_cv=np.sum(v)/cardinal
-        return cross_val,max(5,variance_cv)"""
-        """cv,v=0,[]
+        return cross_val,max(variance_cv,1)"""
+    
+        cv,v=0,[]
+        sum_prior=sum(prior_SA.values())
+        for next_state,next_state_count in nSAS_SA.items():            
+            value=(prior_SA[next_state]-1)/(sum_prior-1)
+            cv-=np.log(value)*next_state_count
+            v+=[-np.log(value)]*int(next_state_count)
+            prior_SA[next_state]+=1
+        v=np.array(v)
+        cardinal=sum(nSAS_SA.values())
+        cross_val =cv/cardinal
+        v=(v-cross_val)**2
+        variance_cv=np.sum(v)/cardinal
+        return cross_val,variance_cv
+    
+        """ cv,v=0,[]
         for next_state,next_state_count in prior.items():
             if next_state_count>1:
                 value=(next_state_count-1)/sum(prior.values())
@@ -146,7 +151,7 @@ class BEBLP_Agent:
         cross_validation =cv/cardinal
         var=(v-cross_validation)**2
         variance_cv=np.sum(var)/cardinal
-        return cross_validation,variance_cv"""
+        return cross_validation,variance_cv
         cv,v=0,[]
         for next_state,next_state_count in nSAS_SA.items():
             value=(next_state_count-1)/sum(nSAS_SA.values())
@@ -159,6 +164,6 @@ class BEBLP_Agent:
         cross_validation =cv/cardinal
         var=(v-cross_validation)**2
         variance_cv=np.sum(var)/cardinal
-        return cross_validation,variance_cv
+        return cross_validation,variance_cv"""
         
             

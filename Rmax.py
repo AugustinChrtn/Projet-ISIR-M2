@@ -94,5 +94,5 @@ class Rmax_Agent:
         #Below is the wrong prior version
         """for state in self.environment.states:
             for action in self.environment.actions:
-                self.max_visits[state][action]=np.random.randint(self.m,self.u_m*self.m)"""
+                self.max_visits[state][action]=np.random.randint(self.m,self.u_m)"""
         

@@ -57,11 +57,12 @@ class BEBLP_Agent:
         self.last_k[old_state][action][self.nSA[old_state][action]%self.step_update]=new_state
         #Ajout du bonus qui dépend du nombre de passages
 
-        if self.nSA[old_state][action]<self.step_update:
+        """if self.nSA[old_state][action]<self.step_update:
             new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action],self.prior[old_state][action])
-            self.LP[old_state][action]=new_CV+self.alpha*np.sqrt(new_variance)
-            self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
-            
+            self.LP[old_state][action]=max(new_CV+self.alpha*np.sqrt(new_variance),0.001)
+            self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))"""
+        
+        
         if self.nSA[old_state][action]>self.step_update:
             new_dict_nSAS,new_dict_prior={k:v for k,v in self.nSAS[old_state][action].items()},{k:v for k,v in self.prior[old_state][action].items()}       
             for last_seen_state in self.last_k[old_state][action]:
@@ -71,7 +72,9 @@ class BEBLP_Agent:
                     del new_dict_nSAS[last_seen_state]
             new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action],self.prior[old_state][action])
             old_CV,old_variance=self.cross_validation(new_dict_nSAS,new_dict_prior)
+            #print(old_CV,new_CV,new_variance)
             self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
+            #print(self.LP[old_state][action])
             self.bonus[old_state][action]=self.beta/(1+1/np.sqrt(self.LP[old_state][action]))
         
         for i in range(10):

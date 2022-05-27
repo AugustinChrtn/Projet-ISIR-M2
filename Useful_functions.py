@@ -163,7 +163,11 @@ def open_pickle(path):
     with open(path, 'rb') as file:
         return pickle.load(file)
 
+##### EXTRACTING RESULTS ####
 
+
+def extracting_results(results):
+    pass
 ######## VISUALISATION ########
 
 def convert_from_default(dic):
@@ -236,6 +240,8 @@ def convergence(array,longueur=30,variation=0.2,absolu=0.1,artefact=3):
                 return [len(array)-len(array[i+1:]),np.mean(array[i+1:]),np.var(array[i+1:])]            
     return [len(array)-1,np.mean(array),np.var(array)]
 
+    
+            
 ###### Policy evaluation #####
 
 def value_iteration(environment,gamma,accuracy):
@@ -369,7 +375,7 @@ def compute_optimal_policies(environments_parameters=environments_parameters):
 
 ### Parametter fitting ##
 
-environment_names=['Lopes']
+precision_conv=-0.2
 
 def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=5,screen=0,pas_VI=25):
     BEB_parameters={(beta,prior):{'gamma':0.95,'beta':beta,'known_states':True,'coeff_prior':prior,'informative':True} for beta in betas for prior in priors}
@@ -382,12 +388,16 @@ def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accura
             for prior in priors :
                 BEB=BEB_Agent(environment,**BEB_parameters[(beta,prior)]) #Defining a new agent from the dictionary agents
                 
-                _,_,policy_value_error= play(environment,BEB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+                _,step_number,policy_value_error= play(environment,BEB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
                 pol_error[beta,prior].append(policy_value_error)
+
     min_length_param={(beta,prior):np.min([len(pol_error[beta,prior][i]) for i in range(len(environment_names))]) for beta in betas for prior in priors}
     mean_pol_error={(beta,prior): np.average([pol_error[beta,prior][i][:min_length_param[beta,prior]] for i in range(len(environment_names))],axis=0) for beta in betas for prior in priors}
+    convergence_trial={(beta,prior):np.where(mean_pol_error[beta,prior]<precision_conv)[-1][-1] for beta in betas for prior in priors}
+    convergence_step={(beta,prior):pas_VI*(convergence_trial[beta,prior]+1) for beta in betas for prior in priors}
+    
+    return mean_pol_error,convergence_step
 
-    return mean_pol_error
 
 
 
@@ -403,17 +413,21 @@ def fitting_RALP(environment_names,alphas,ms,trials = 200,max_step = 30,accuracy
                 RALP=RmaxLP_Agent(environment,**RALP_parameters[(alpha,m)]) #Defining a new agent from the dictionary agents
                 
                 reward,step_number,policy_value_error= play(environment,RALP,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
-
                 pol_error[alpha,m].append(policy_value_error)
+
     min_length_param={(alpha,m):np.min([len(pol_error[alpha,m][i]) for i in range(len(environment_names))]) for alpha in alphas for m in ms}
     mean_pol_error={(alpha,m): np.average([pol_error[alpha,m][i][:min_length_param[alpha,m]] for i in range(len(environment_names))],axis=0) for alpha in alphas for m in ms}
-    return mean_pol_error
+    convergence_trial={(alpha,m):np.where(mean_pol_error[alpha,m]<precision_conv)[-1][-1] for alpha in alphas for m in ms}
+    convergence_step={(alpha,m):pas_VI*(convergence_trial[alpha,m]+1) for alpha in alphas for m in ms}  
+    
+    return mean_pol_error,convergence_step
 
 
 
 def fitting_QMB(environment_names,epsilons,trials=50,max_step=30,accuracy=0.01,screen=0,pas_VI=25):
     QMB_parameters={epsilon:{'gamma':0.95,'known_states':True,'epsilon':epsilon} for epsilon in epsilons}
     pol_error={epsilon:[] for epsilon in epsilons}
+    
     for name_environment in environment_names:   
         print(name_environment)
         environment=all_environments[name_environment](**environments_parameters[name_environment])                
@@ -421,12 +435,15 @@ def fitting_QMB(environment_names,epsilons,trials=50,max_step=30,accuracy=0.01,s
             print(epsilon)
             QMB=QMB_Agent(environment,**QMB_parameters[epsilon]) #Defining a new agent from the dictionary agents
                 
-            _,_,policy_value_error= play(environment,QMB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+            _,step_number,policy_value_error= play(environment,QMB,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
                     
             pol_error[epsilon].append(policy_value_error)
+
     min_length_param={epsilon:np.min([len(pol_error[epsilon][i]) for i in range(len(environment_names))]) for epsilon in epsilons}
     mean_pol_error={epsilon: np.average([pol_error[epsilon][i][:min_length_param[epsilon]] for i in range(len(environment_names))],axis=0) for epsilon in epsilons}
-    return mean_pol_error
+    convergence_trial={epsilon:np.where(mean_pol_error[epsilon]<precision_conv)[-1][-1] for epsilon in epsilons}
+    convergence_step={epsilon:pas_VI*(convergence_trial[epsilon]+1) for epsilon in epsilons}  
+    return mean_pol_error,convergence_step
 
 
 def fitting_BEBLP(environment_names,betas,alphas,trials = 300,max_step = 30,accuracy=5,screen=0,pas_VI=25):
@@ -440,12 +457,16 @@ def fitting_BEBLP(environment_names,betas,alphas,trials = 300,max_step = 30,accu
             for alpha in alphas :
                 BEBLP=BEBLP_Agent(environment,**BEBLP_parameters[(beta,alpha)]) #Defining a new agent from the dictionary agents
                 
-                _,_,policy_value_error= play(environment,BEBLP,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+                _,step_number,policy_value_error= play(environment,BEBLP,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
                 pol_error[beta,alpha].append(policy_value_error)
+
     min_length_param={(beta,alpha):np.min([len(pol_error[beta,alpha][i]) for i in range(len(environment_names))]) for beta in betas for alpha in alphas}
     mean_pol_error={(beta,alpha): np.average([pol_error[beta,alpha][i][:min_length_param[beta,alpha]] for i in range(len(environment_names))],axis=0) for beta in betas for alpha in alphas}
+    convergence_trial={(beta,alpha):np.where(mean_pol_error[beta,alpha]<precision_conv)[-1][-1] for beta in betas for alpha in alphas}
+    convergence_step={(beta,alpha):pas_VI*(convergence_trial[beta,alpha]+1) for beta in betas for alpha in alphas}
+    
+    return mean_pol_error,convergence_step
 
-    return mean_pol_error
 
 def fitting_RA(environment_names,u_ms,ms,trials = 200,max_step = 30,accuracy=.05,screen=0,pas_VI=25):
     RALP_parameters={(m,u_m):{'gamma':0.95,'Rmax':1,'m':m,'u_m':u_m} for u_m in u_ms for m in ms}
@@ -458,96 +479,148 @@ def fitting_RA(environment_names,u_ms,ms,trials = 200,max_step = 30,accuracy=.05
             for m in ms :
                 RA=Rmax_Agent(environment,**RALP_parameters[(m,u_m)]) #Defining a new agent from the dictionary agents
                 
-                r_,_,policy_value_error= play(environment,RA,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+                r_,step_number,policy_value_error= play(environment,RA,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
 
                 pol_error[m,u_m].append(policy_value_error)
     min_length_param={(m,u_m):np.min([len(pol_error[m,u_m][i]) for i in range(len(environment_names))]) for u_m in u_ms for m in ms}
-    print(min_length_param)
     mean_pol_error={(m,u_m): np.average([pol_error[m,u_m][i][:min_length_param[m,u_m]] for i in range(len(environment_names))],axis=0) for u_m in u_ms for m in ms}
-    return mean_pol_error
+    convergence_trial={(m,u_m):np.where(mean_pol_error[m,u_m]<precision_conv)[-1][-1] for m in ms for u_m in u_ms}
+    convergence_step={(m,u_m):pas_VI*(convergence_trial[m,u_m]+1) for m in ms for u_m in u_ms} 
+    return mean_pol_error,convergence_step
 
 
 
-
-pas_VI=25
+pas_VI=50
 accuracy=0.01
-trials=84
+trials=100
 max_step=30
 
 
-environment_names=['Lopes_{0}'.format(num) for num in range(1,6)]
+environment_names=['Lopes_{0}'.format(num) for num in range(2,3)]
 
 temps=str(time.time())
-
 """
-epsilons=[0.005,0.01,0.02,0.05,0.1]
-a=fitting_QMB(environment_names,epsilons,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+
+epsilons=[0.05,0.1,0.2,0.4,0.6,0.8,1]
+a,conv_a=fitting_QMB(environment_names,epsilons,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/e-greedy'+temps,a)
 plt.figure()
 for epsilon,mean_pol in a.items() : 
     plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='epsilon='+str(epsilon))
-plt.title('e-greedy_Lopes')
+plt.title('e-greedy')
 plt.grid(linestyle='--')
 plt.legend()
-plt.savefig('Parameter fitting/e-greedy_Lopes.png')
+plt.savefig('Parameter fitting/e-greedy'+temps+environment_names[0]+'.png')
 plt.show()
 
-
-betas=[1,2,3]
-priors=[1,3,5]
-b=fitting_BEB(environment_names,betas=betas,priors=priors,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+betas=[1*i for i in range(1,6)]
+priors=[1*i for i in range(1,6)]
+b,conv_b=fitting_BEB(environment_names,betas=betas,priors=priors,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/BEB'+temps,b)
 plt.figure()
 for (beta,prior),mean_pol in b.items() : 
     plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='beta='+str(beta)+', prior='+str(prior))
-plt.title('BEB_Lopes')
+plt.title('BEB')
 plt.grid(linestyle='--')
 plt.legend()
-plt.savefig('Parameter fitting/BEB_Lopes.png')
+plt.savefig('Parameter fitting/BEB'+temps+'.png')
 plt.show()
 
-alphas=[1,2,3]
-ms=[0.5,1,1.5]
-c=fitting_RALP(environment_names,alphas=alphas,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+ser = pd.Series(list(conv_b.values()),
+                  index=pd.MultiIndex.from_tuples(conv_b.keys()))
+df = ser.unstack().fillna(0)
+df.shape
+plt.figure()
+ax=sns.heatmap(df,cmap='Blues')
+plt.xlabel('Betas')
+plt.ylabel('Priors')
+plt.title('Pas de convergence BEB')
+plt.savefig('Parameter fitting/BEB_heatmap'+temps+environment_names[0]+'.png')
+plt.show()
+
+
+alphas=[round(0.2*i,1) for i in range(1,6)]
+ms=[round(0.8+0.2*i,1) for i in range(1,11)]
+c,conv_c=fitting_RALP(environment_names,alphas=alphas,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/RALP'+temps,c)
 
 
 plt.figure()
 for (alpha,m),mean_pol in c.items() : 
     plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='alpha='+str(alpha)+', m='+str(m))
-plt.title('RmaxLP_Lopes')
+plt.title('RmaxLP')
 plt.grid(linestyle='--')
 plt.legend()
-plt.savefig('Parameter fitting/RmaxLP_Lopes.png')
+plt.savefig('Parameter fitting/RmaxLP'+temps+'.png')
+plt.show()
+
+ser = pd.Series(list(conv_c.values()),
+                  index=pd.MultiIndex.from_tuples(conv_c.keys()))
+df = ser.unstack().fillna(0)
+df.shape
+plt.figure()
+ax=sns.heatmap(df,cmap='Blues')
+plt.xlabel('m')
+plt.ylabel('alpha')
+plt.title('Pas de convergence RmaxLP')
+plt.savefig('Parameter fitting/RALP_heatmap'+environment_names[0]+temps+'.png')
 plt.show()
 
 
-alphas=[1,2,3]
-betas=[1,2,3]
-d=fitting_BEBLP(environment_names,alphas=alphas,betas=betas,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+alphas=[0.5*i for i in range(1,3)]
+betas=[1*i for i in range(1,3)]
+d,conv_d=fitting_BEBLP(environment_names,alphas=alphas,betas=betas,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/BEBLP'+temps,d)
 
 plt.figure()
 for (beta,alpha),mean_pol in d.items() : 
     plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='alpha='+str(alpha)+', beta='+str(beta))
-plt.title('BEBLP_Lopes')
+plt.title('BEBLP')
 plt.grid(linestyle='--')
 plt.legend()
-plt.savefig('Parameter fitting/BEBLP_Lopes.png')
+plt.savefig('Parameter fitting/BEBLP'+environment_names[0]+temps+'.png')
+plt.show()
+
+ser = pd.Series(list(conv_d.values()),
+                  index=pd.MultiIndex.from_tuples(conv_d.keys()))
+df = ser.unstack().fillna(0)
+df.shape
+plt.figure()
+ax=sns.heatmap(df,cmap='Blues')
+plt.xlabel('Alpha')
+plt.ylabel('Beta')
+plt.title('Pas de convergence BEBLP')
+plt.savefig('Parameter fitting/BEBLP_heatmap'+environment_names[0]+temps+'.png')
 plt.show()
 
 
-u_ms=[2,3,4]
-ms=[2,3,4]
-e=fitting_RA(environment_names,u_ms=u_ms,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+u_ms=[i for i in range(1,11)]
+ms=[i for i in range(1,11)]
+e,conv_e=fitting_RA(environment_names,u_ms=u_ms,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/RA'+temps,e)
 
 plt.figure()
 for (m,u_m),mean_pol in e.items() : 
     plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='m='+str(m)+', u_m='+str(u_m))
-plt.title('Rmax_Lopes')
+plt.title('Rmax')
 plt.grid(linestyle='--')
 plt.legend()
-plt.savefig('Parameter fitting/Rmax_Lopes.png')
+plt.savefig('Parameter fitting/Rmax'+environment_names[0]+temps+'.png')
+plt.show()
+
+ser = pd.Series(list(conv_e.values()),
+                  index=pd.MultiIndex.from_tuples(conv_e.keys()))
+df = ser.unstack().fillna(0)
+df.shape
+plt.figure()
+ax=sns.heatmap(df,cmap='Blues')
+plt.xlabel('u_m')
+plt.ylabel('m')
+plt.title('Pas de convergence Rmax')
+plt.savefig('Parameter fitting/Rmax_heatmap'+environment_names[0]+temps+'.png')
 plt.show()
 """
+###Plotting parameter fitting from saved data ####
+
+
+

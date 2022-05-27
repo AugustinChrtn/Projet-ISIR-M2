@@ -64,9 +64,9 @@ class RmaxLP_Agent:
                     """
 
                     
-                    if self.nSA[old_state][action]<self.step_update:
+                    """if self.nSA[old_state][action]<self.step_update:
                         new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
-                        self.LP[old_state][action]=new_CV+self.alpha*np.sqrt(new_variance)
+                        self.LP[old_state][action]=new_CV+self.alpha*np.sqrt(new_variance)"""
                     
                     if self.nSA[old_state][action]>self.step_update:
                         new_dict={}
@@ -79,7 +79,11 @@ class RmaxLP_Agent:
                         new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action])
                         old_CV,old_variance=self.cross_validation(new_dict)
                         self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
-                    
+                        
+                        if old_state==(0,0) and action==1:
+                            """print(old_CV,new_CV,new_variance)
+                            print(self.LP[old_state][action])
+                            print("")"""
                     for i in range(10):
                             for visited_state in self.nSA:
                                 for taken_action in self.nSA[visited_state]:
@@ -105,7 +109,7 @@ class RmaxLP_Agent:
                     self.tSAS[state_1][action][state_2]=1/number_states
     
     def cross_validation(self,nSAS_SA):
-        cv,v=0,[]
+        """cv,v=0,[]
         for next_state,next_state_count in nSAS_SA.items():
             value=(next_state_count-1)/sum(nSAS_SA.values())
             if value ==0: log_value=-1
@@ -118,16 +122,18 @@ class RmaxLP_Agent:
         var=(v-cross_validation)**2
         variance_cv=np.sum(var)/cardinal
         return cross_validation,variance_cv
-        
-        """cv,v=0,[]
+        """
+        cv,v=0,[]
         prior=0.04
         sum_count=sum(nSAS_SA.values())
         sum_prior=sum_count + 25*prior
+        """if sum_count==1:
+            return np.log(prior/sum_prior)"""
         for next_state,next_state_count in nSAS_SA.items():
             if next_state_count-1==0:
-                log_value=np.log(prior/sum_prior)
+                log_value=np.log(prior/(sum_prior-1))
             else :
-                value=(next_state_count-1)/(sum_prior-1)
+                value=((next_state_count-1)+prior)/(sum_prior-1)
                 log_value=np.log(value)
             cv-=next_state_count*log_value
             v+=[-log_value]*next_state_count
@@ -135,4 +141,4 @@ class RmaxLP_Agent:
         cross_validation =cv/sum_count
         var=(v-cross_validation)**2
         variance_cv=np.sum(var)/sum_count
-        return cross_validation,variance_cv"""
+        return cross_validation,variance_cv
