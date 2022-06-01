@@ -18,6 +18,7 @@ from Deterministic_nostat import Deterministic_no_stat
 from Uncertainworld_U import Uncertain_State_U
 from Uncertainworld_B import Uncertain_State_B
 
+
 from Q_learning import Q_Agent
 from Kalman import Kalman_agent
 from Kalman_sum import Kalman_agent_sum
@@ -27,7 +28,7 @@ from KalmanMB import KalmanMB_Agent
 from greedyMB import QMB_Agent
 from BEBLP import BEBLP_Agent
 from RmaxLP import RmaxLP_Agent
-
+from PIM import PIM_Agent
 
 #Initializing parameters
 environments_parameters={'Two_Step':{},'Lopes':{'transitions':np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True)}}
@@ -63,26 +64,27 @@ agent_parameters={Q_Agent:{'alpha':0.5,'beta':0.05,'gamma':0.95,'exploration':'s
             Kalman_agent:{'gamma':0.95, 'variance_ob':1,'variance_tr':40},
             KalmanMB_Agent:{'gamma':0.95,'H_update':3,'entropy_factor':0.1,'epis_factor':50,'alpha':0.2,'gamma_epis':0.5,'variance_ob':0.02,'variance_tr':0.5,'known_states':True},
             QMB_Agent:{'gamma':0.95,'epsilon':0.5,'known_states':True},
-            Rmax_Agent:{'gamma':0.95, 'm':9,'Rmax':1,'known_states':True,'u_m':13},
-            BEB_Agent:{'gamma':0.95,'beta':4,'known_states':True,'coeff_prior':1,'informative':True},
-            BEBLP_Agent:{'gamma':0.95,'beta':4,'step_update':10,'coeff_prior':0.01,'alpha':2},
-            RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':10,'alpha':0.6,'m':2.6}}
+            Rmax_Agent:{'gamma':0.95, 'm':3,'Rmax':1,'known_states':True,'u_m':3},
+            BEB_Agent:{'gamma':0.95,'beta':4,'known_states':True,'coeff_prior':0.001,'informative':False},
+            BEBLP_Agent:{'gamma':0.95,'beta':1,'step_update':10,'coeff_prior':0.001,'alpha':0.5},
+            RmaxLP_Agent:{'gamma':0.95,'Rmax':1,'step_update':5,'alpha':1,'m':4},
+            PIM_Agent:{'gamma':0.95, 'beta':1, 'alpha':0.5, 'k':2}}
 
 
 nb_iters=1
-trials = 84
-max_step =30
+trials = 125
+max_step =40
 photos=[10,40,70,100,130,160,199]
 screen=0
 accuracy=0.01
 pas_VI=50
 
-#agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent,'QA':Q_Agent,'KAS':Kalman_agent_sum,'KMB':KalmanMB_Agent}
-agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent}
+#agents={'RA':Rmax_Agent,'RALP':RmaxLP_Agent,'BEB':BEB_Agent,'BEBLP':BEBLP_Agent,'QMB':QMB_Agent,'KMB':KalmanMB_Agent,'PIM':PIM_Agent,'QA':Q_Agent,'KAS':Kalman_agent_sum}
+agents={'RA':Rmax_Agent}
 
 #environments=['Lopes_{0}'.format(num) for num in range(1,21)]+['Lopes_nostat_{0}'.format(num) for num in range(1,21)]+['D_{0}'.format(num) for num in range(1,21)]+['U_{0}'.format(num) for num in range(1,21)]+['UB_{0}'.format(num) for num in range(1,21)]
 
-names_env = ['Lopes_{0}'.format(num) for num in range(1,21)]
+names_env = ['U_{0}'.format(num) for num in range(1,2)]
     
 rewards={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
 steps={(name_agent,name_environment):[] for name_agent in agents.keys() for name_environment in names_env}
@@ -165,18 +167,18 @@ std_rewards_agent={name_agent: np.std(np.array([rewards[name_agent,name_environm
 
     
 
-rename={'RA':'R-max','BEB':'BEB','BEBLP':'ζ-EB','RALP':'ζ-R-max','QMB':'Ɛ-greedy','KMB':'KMB'}
-colors={'RA':'royalblue','RALP':'royalblue','QMB':'red','BEB':'black','BEBLP':'black','KMB':'green'}
-markers={'RA':'^','RALP':'o','BEB':'x','BEBLP':'*','QMB':'s','KMB':'P'}
-linewidths={'RA':'0.75','RALP':'1.25','BEB':'0.75','BEBLP':'1.25','QMB':'0.75','KMB':'1'}
-marker_sizes={'RA':'3','RALP':'3','BEB':'3','BEBLP':'3','QMB':'3','KMB':'3'}
+rename={'RA':'R-max','BEB':'BEB','BEBLP':'ζ-EB','RALP':'ζ-R-max','QMB':'Ɛ-greedy','KMB':'KMB','PIM':'PIM'}
+colors={'RA':'royalblue','RALP':'royalblue','QMB':'red','BEB':'black','BEBLP':'black','KMB':'green','PIM':'orange'}
+markers={'RA':'^','RALP':'o','BEB':'x','BEBLP':'*','QMB':'s','KMB':'P','PIM':'D'}
+linewidths={'RA':'0.75','RALP':'1.25','BEB':'0.75','BEBLP':'1.25','QMB':'0.75','KMB':'1','PIM':'1'}
+marker_sizes={'RA':'3','RALP':'3','BEB':'3','BEBLP':'3','QMB':'3','KMB':'3','PIM':'3'}
 
 fig=plt.figure(dpi=1200)
 ax = fig.add_subplot(1, 1, 1)
 for name_agent in agents.keys():
     plt.errorbar([pas_VI*i for i in range(min_length_agent[name_agent])],mean_pol_error_agent[name_agent], 
                  yerr=std_pol_error_agent[name_agent],color=colors[name_agent],linewidth=linewidths[name_agent],
-                 elinewidth=0.5,label=rename[name_agent],ms=marker_sizes[name_agent],marker=markers[name_agent],fillstyle='none')
+                 elinewidth=0.5,label=rename[name_agent],ms=marker_sizes[name_agent],marker=markers[name_agent],fillstyle='none',capsize=1)
 plt.xlabel("Steps")
 plt.ylabel("Policy value error")
 plt.grid(linestyle='--')
@@ -189,13 +191,27 @@ ax_reward=fig_reward.add_subplot(1,1,1)
 for name_agent in agents.keys():
     plt.errorbar([i+1 for i in range(trials)],rewards_agent[name_agent], 
                  yerr=std_rewards_agent[name_agent],color=colors[name_agent],linewidth=linewidths[name_agent],
-                 elinewidth=0.5,label=rename[name_agent],ms=marker_sizes[name_agent],marker=markers[name_agent],fillstyle='none')
+                 elinewidth=0.5,label=rename[name_agent],ms=marker_sizes[name_agent],marker=markers[name_agent],fillstyle='none',capsize=1)
 plt.xlabel("Trial")
 plt.ylabel("Reward")
 plt.grid(linestyle='--')
 plt.legend()
 plt.savefig('Results/Rewards'+temps+names_env[0]+'.png')
 plt.show()
+
+fig_reward=plt.figure(dpi=1200)
+ax_reward=fig_reward.add_subplot(1,1,1)
+for name_agent in agents.keys():
+    plt.plot([i+1 for i in range(trials)],rewards_agent[name_agent], 
+                 color=colors[name_agent],linewidth=linewidths[name_agent],
+                 label=rename[name_agent],ms=marker_sizes[name_agent],marker=markers[name_agent],fillstyle='none')
+plt.xlabel("Trial")
+plt.ylabel("Reward")
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Results/Rewards_nostd'+temps+names_env[0]+'.png')
+plt.show()
+
 
 
 

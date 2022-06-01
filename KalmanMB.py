@@ -3,11 +3,10 @@ from collections import defaultdict
 
 class KalmanMB_Agent:
 
-    def __init__(self,environment, gamma=0.95,H_update=3,entropy_factor=10,alpha=0.2,gamma_epis=0.5,epis_factor=10,variance_ob=1,variance_tr=1,known_states=True):
+    def __init__(self,environment, gamma=0.95,H_update=3,entropy_factor=10,gamma_epis=0.5,epis_factor=10,variance_ob=1,variance_tr=1,known_states=True):
         
         self.environment=environment
         self.gamma = gamma
-        self.alpha=alpha
         self.gamma_epis=gamma_epis
         self.variance_ob=variance_ob
         self.variance_tr=variance_tr
@@ -69,7 +68,7 @@ class KalmanMB_Agent:
                     
                     max_epis_in_new_state = max(self.epis[new_state].values())
                     current_epis=self.epis[old_state][action]
-                    self.epis[old_state][action] = (1 - self.alpha) * current_epis + self.alpha * (self.entropy_factor*self.H[old_state][action]+self.KL[old_state][action]+ self.gamma_epis * max_epis_in_new_state)
+                 ###CHANGER EN MB   self.epis[old_state][action] = (self.entropy_factor*self.H[old_state][action]+self.KL[old_state][action]+ self.gamma_epis * max_epis_in_new_state)
                     
                     
                     for i in range(10):

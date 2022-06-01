@@ -16,22 +16,23 @@ def choice_dictionary(dictionary):
 class Uncertain_State:
     def __init__(self,world,transitions):
         initial_state=[]
-        final_state=[]
+        reward_state=[]
         wall_state=[]
         for row in range(len(world)):
             for col in range(len(world[0])):
                 if world[row,col]==-1:wall_state.append((row,col))
                 if world[row,col]==-2:initial_state.append((row,col))
-                if world[row,col]>0:final_state.append((row,col))
+                if world[row,col]>0:reward_state.append((row,col))
         self.height = len(world)
         self.width = len(world[0])
         self.grid = world       
+        self.reward_states={}
         self.final_states={}
-        for state in final_state:self.final_states[state[0],state[1],STAY]=world[state]
-        self.values= np.array(create_matrix(self.width, self.height,[-0.01,-0.01,-0.01,-0.01,-0.01]))  
+        for state in reward_state:self.reward_states[state[0],state[1],STAY]=world[state]
+        self.values= np.array(create_matrix(self.width, self.height,[0.,0.,0.,0.,0.]))  
         self.current_location = initial_state[0]    
         self.first_location=initial_state[0]
-        for transition, reward in self.final_states.items():
+        for transition, reward in self.reward_states.items():
             self.values[transition[0],transition[1],STAY]=reward
         self.walls=wall_state
         self.actions = [UP, DOWN, LEFT, RIGHT,STAY]
@@ -56,7 +57,7 @@ class Uncertain_State:
                     self.states.append((i,j))
         
     def make_step(self, action):
-        last_location = self.current_location       
+        last_location = self.current_location
         reward = self.values[last_location[0]][last_location[1]][action]
         if action == UP:
             self.current_location = choice_dictionary(self.UP[last_location[0]][last_location[1]])        

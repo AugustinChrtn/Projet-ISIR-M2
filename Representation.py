@@ -7,7 +7,7 @@ UP,DOWN,LEFT,RIGHT,STAY=0,1,2,3,4
 class Graphique():
 
     def __init__(self, screen_size,cell_width, 
-        cell_height, cell_margin,grid,finals,init,table=np.zeros((0,0)),actions={}):
+        cell_height, cell_margin,grid,rewards,init,table=np.zeros((0,0)),actions={}):
         
         
         self.BLACK = (0, 0, 0)
@@ -64,27 +64,33 @@ class Graphique():
 					                 self.color,[(self.MARGIN + self.WIDTH)*col+self.MARGIN,
 					                 (self.MARGIN + self.HEIGHT)*row+self.MARGIN,self.WIDTH,self.HEIGHT])
 
-        if finals=={}: finals = {(2,4,1):1}
-        max_value=max(finals.values())
-        for key,value in finals.items():
+
+        max_value=max(rewards.values())
+        number_keys=len(rewards)
+        for key,value in rewards.items():
             if key[2] != STAY:
-                position_correction={UP:(10,20),DOWN:(-10,20),LEFT:(25,-7),RIGHT:(25,37)}
+                position_correction={UP:(15,25),DOWN:(35,25),LEFT:(25,15),RIGHT:(25,35)}
                 y=50*key[0]+position_correction[key[2]][0]
                 x=50*key[1]+position_correction[key[2]][1]
                 angles={UP:0,DOWN:180,RIGHT:270,LEFT:90}
                 angle=angles[key[2]]
                 if value==max_value : self.DrawArrow(x, y,self.GREEN,angle)
                 else : self.DrawArrow(x, y,self.PURPLE,angle)
-                text_corrections={UP:(18,8),DOWN:(-35,8),LEFT:(20,0),RIGHT:(20,0)}
+                """text_corrections={UP:(18,8),DOWN:(-35,8),LEFT:(20,0),RIGHT:(20,0)}
                 label=self.font.render('+'+str(value),1,self.BLACK)
                 x=50*key[0]+text_corrections[key[2]][0]
                 y=50*key[1]+text_corrections[key[2]][1]
-                self.screen.blit(label, (y,x))
-            if key[2]==STAY:
+                self.screen.blit(label, (y,x))"""
+            if key[2]==STAY and number_keys<5:
                 x=50*(key[1])+27.5
                 y=50*(key[0])+27.5
                 if value==max_value : pygame.draw.circle(self.screen, self.GREEN, (x,y), 22)
                 else : pygame.draw.circle(self.screen, self.PURPLE, (x,y), 15)
+            elif key[2]==STAY:
+                x=50*(key[1])+27.5
+                y=50*(key[0])+27.5
+                if value==max_value : pygame.draw.circle(self.screen, self.GREEN, (x,y), 15)
+                else : pygame.draw.circle(self.screen, self.PURPLE, (x,y), 8)
         pygame.draw.rect(self.screen, self.BLUE, pygame.Rect(50*(self.init[1])+14, 50*(self.init[0])+14, 25, 25))
                             
         

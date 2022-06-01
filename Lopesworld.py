@@ -40,7 +40,7 @@ class Lopes_State():
         
         for transition, reward in self.rewards.items():
             self.values[transition[0],transition[1],transition[2]]=reward
-
+        self.reward_states={(2,4,0):1,(2,4,1):1,(2,4,2):1,(2,4,3):1,(2,4,4):1}
         self.max_exploration=125
         self.UP=transitions[UP]
         self.DOWN=transitions[DOWN]

@@ -150,7 +150,7 @@ def picture_world(environment,table):
     cell_width = 45
     cell_height = 45
     cell_margin = 5
-    gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.final_states,init_loc,max_Q,best_actions)
+    gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.reward_states,init_loc,max_Q,best_actions)
     return gridworld
 
 ### SAVING PARAMETERS ####
@@ -258,19 +258,6 @@ def value_iteration(environment,gamma,accuracy):
         policy[state]=np.argmax([np.sum([environment.transitions[action][state][new_state]*(environment.values[state[0],state[1],action]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
     return V,policy
 
-def value_iteration2(environment,gamma,accuracy):
-    V={state:1 for state in environment.states}
-    policy={state:0 for state in environment.states}
-    delta=accuracy+1
-    while delta > accuracy :
-        delta=0
-        for state,value in V.items():
-            value_V=V[state]
-            V[state]=np.max([np.sum([environment.transitions[action][state][new_state]*(environment.values[new_state]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
-            delta=max(delta,np.abs(value_V-V[state]))
-    for state,value in V.items():
-        policy[state]=np.argmax([np.sum([environment.transitions[action][state][new_state]*(environment.values[new_state]+gamma*V[new_state]) for new_state in environment.transitions[action][state].keys()]) for action in environment.actions])
-    return V,policy
 
 def plot_VI(environment,gamma,accuracy): #only in gridworlds
     V,action=value_iteration(environment,gamma,accuracy)
@@ -285,7 +272,7 @@ def plot_VI(environment,gamma,accuracy): #only in gridworlds
     cell_width = 45
     cell_height = 45
     cell_margin = 5
-    gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.final_states,init_loc,V_2,action)
+    gridworld = Graphique(screen_size,cell_width, cell_height, cell_margin,environment.grid,environment.reward_states,init_loc,V_2,action)
     pygame.image.save(gridworld.screen,"Images/Optimal policy/VI_test"+type(environment).__name__+".png")
     return gridworld
 
@@ -377,8 +364,8 @@ def compute_optimal_policies(environments_parameters=environments_parameters):
 
 precision_conv=-0.2
 
-def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=5,screen=0,pas_VI=25):
-    BEB_parameters={(beta,prior):{'gamma':0.95,'beta':beta,'known_states':True,'coeff_prior':prior,'informative':True} for beta in betas for prior in priors}
+def fitting_BEB(environment_names,betas,priors,trials = 300,max_step = 30,accuracy=0.05,screen=0,pas_VI=25,informative=True):
+    BEB_parameters={(beta,prior):{'gamma':0.95,'beta':beta,'known_states':True,'coeff_prior':prior,'informative':informative} for beta in betas for prior in priors}
     pol_error={(beta,prior):[] for beta in betas for prior in priors}
     for name_environment in environment_names:   
         print(name_environment)
@@ -447,7 +434,7 @@ def fitting_QMB(environment_names,epsilons,trials=50,max_step=30,accuracy=0.01,s
 
 
 def fitting_BEBLP(environment_names,betas,alphas,trials = 300,max_step = 30,accuracy=5,screen=0,pas_VI=25):
-    BEBLP_parameters={(beta,alpha):{'gamma':0.95,'beta':beta,'alpha':alpha,'coeff_prior':0.001} for beta in betas for alpha in alphas}
+    BEBLP_parameters={(beta,alpha):{'gamma':0.95,'beta':beta,'alpha':alpha,'coeff_prior':0.001,'step_update':10} for beta in betas for alpha in alphas}
     pol_error={(beta,alpha):[] for beta in betas for alpha in alphas}
     for name_environment in environment_names:   
         print(name_environment)
@@ -493,28 +480,60 @@ def fitting_RA(environment_names,u_ms,ms,trials = 200,max_step = 30,accuracy=.05
 pas_VI=50
 accuracy=0.01
 trials=100
-max_step=30
+max_step=40
 
 
-environment_names=['Lopes_{0}'.format(num) for num in range(2,3)]
+environment_names=['U_1']
 
 temps=str(time.time())
+colors_6=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown']
+markers=['^','o','x','*','s','P']
+
+#E-GREEDY 
+
 """
 
-epsilons=[0.05,0.1,0.2,0.4,0.6,0.8,1]
+epsilons=[0.005,0.1,0.2,0.5,0.8,1]
 a,conv_a=fitting_QMB(environment_names,epsilons,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/e-greedy'+temps,a)
-plt.figure()
+plt.figure(dpi=300)
+count=0
 for epsilon,mean_pol in a.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='epsilon='+str(epsilon))
-plt.title('e-greedy')
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='epsilon='+str(epsilon),color=colors_6[count],marker=markers[count])
+    count+=1
+plt.title('ε-greedy')
+plt.xlabel("Steps")
+plt.ylabel("Policy value error")
 plt.grid(linestyle='--')
 plt.legend()
 plt.savefig('Parameter fitting/e-greedy'+temps+environment_names[0]+'.png')
 plt.show()
 
-betas=[1*i for i in range(1,6)]
-priors=[1*i for i in range(1,6)]
+
+#BEB NO PRIOR
+
+betas=[0.5,1,2,3,4,5]
+priors=[0.001]
+b,conv_b=fitting_BEB(environment_names,betas=betas,priors=priors,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step,informative=False)
+np.save('Parameter fitting/BEB'+temps,b)
+plt.figure(dpi=300)
+count=0
+for (beta,prior),mean_pol in b.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='beta='+str(beta),color=colors_6[count],marker=markers[count])
+    count+=1
+plt.title('BEB')
+plt.xlabel("Steps")
+plt.ylabel("Policy value error")
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Parameter fitting/BEB'+temps+'.png')
+plt.show()
+
+
+#BEB PRIOR
+
+betas=[round(0.5*i,1) for i in range(1,9)]
+priors=[round(0.1*i,1) for i in range(1,5)]
 b,conv_b=fitting_BEB(environment_names,betas=betas,priors=priors,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/BEB'+temps,b)
 plt.figure()
@@ -532,17 +551,32 @@ df = ser.unstack().fillna(0)
 df.shape
 plt.figure()
 ax=sns.heatmap(df,cmap='Blues')
-plt.xlabel('Betas')
-plt.ylabel('Priors')
+plt.xlabel('Priors')
+plt.ylabel('Betas')
 plt.title('Pas de convergence BEB')
 plt.savefig('Parameter fitting/BEB_heatmap'+temps+environment_names[0]+'.png')
 plt.show()
 
-
-alphas=[round(0.2*i,1) for i in range(1,6)]
-ms=[round(0.8+0.2*i,1) for i in range(1,11)]
+#RALP
+alphas=[0.5]
+ms=[round(0.8*i,1) for i in range(1,7)]
 c,conv_c=fitting_RALP(environment_names,alphas=alphas,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/RALP'+temps,c)
+
+
+plt.figure(dpi=300)
+count=0
+for (alpha,m),mean_pol in c.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='m='+str(m),color=colors_6[count],marker=markers[count])
+    count+=1
+plt.title('Rmax-LP α=0.5')
+plt.xlabel("Steps")
+plt.ylabel("Policy value error")
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Parameter fitting/RmaxLP'+temps+'.png')
+plt.show()
+
 
 
 plt.figure()
@@ -566,13 +600,28 @@ plt.title('Pas de convergence RmaxLP')
 plt.savefig('Parameter fitting/RALP_heatmap'+environment_names[0]+temps+'.png')
 plt.show()
 
+#BEBLP
 
-alphas=[0.5*i for i in range(1,3)]
-betas=[1*i for i in range(1,3)]
+alphas=[0.5]
+betas=[round(0.5*i,1) for i in range(1,7)]
 d,conv_d=fitting_BEBLP(environment_names,alphas=alphas,betas=betas,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/BEBLP'+temps,d)
 
-plt.figure()
+
+plt.figure(dpi=300)
+count=0
+for (beta,alpha),mean_pol in d.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='beta='+str(beta),color=colors_6[count],marker=markers[count])
+    count+=1
+plt.title('BEB-LP')
+plt.xlabel("Steps")
+plt.ylabel("Policy value error")
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Parameter fitting/BEBLP'+temps+'.png')
+plt.show()
+
+plt.figure(dpi=300)
 for (beta,alpha),mean_pol in d.items() : 
     plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='alpha='+str(alpha)+', beta='+str(beta))
 plt.title('BEBLP')
@@ -593,13 +642,29 @@ plt.title('Pas de convergence BEBLP')
 plt.savefig('Parameter fitting/BEBLP_heatmap'+environment_names[0]+temps+'.png')
 plt.show()
 
+#Rmax
 
-u_ms=[i for i in range(1,11)]
-ms=[i for i in range(1,11)]
+ms=[i for i in range(1,7)]
+u_ms=[0]
 e,conv_e=fitting_RA(environment_names,u_ms=u_ms,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
 np.save('Parameter fitting/RA'+temps,e)
 
-plt.figure()
+
+plt.figure(dpi=300)
+count=0
+for (m,u_m),mean_pol in e.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='m='+str(m),color=colors_6[count],marker=markers[count])
+    count+=1
+plt.title('Rmax')
+plt.xlabel("Steps")
+plt.ylabel("Policy value error")
+plt.grid(linestyle='--')
+plt.legend()
+plt.savefig('Parameter fitting/Rmax'+temps+'.png')
+plt.show()
+
+
+plt.figure(dpi=300)
 for (m,u_m),mean_pol in e.items() : 
     plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='m='+str(m)+', u_m='+str(u_m))
 plt.title('Rmax')

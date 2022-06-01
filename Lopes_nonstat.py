@@ -45,7 +45,7 @@ class Lopes_nostat():
         self.LEFT=transitions[LEFT]
         self.RIGHT=transitions[RIGHT]
         self.STAY=transitions[STAY]
-                
+        self.reward_states={(2,4,0):1,(2,4,1):1,(2,4,2):1,(2,4,3):1,(2,4,4):1}     
         self.states=[(i,j) for i in range(self.height) for j in range(self.width)]
         self.transitions=transitions
         self.transitions2=transitions2

@@ -126,7 +126,7 @@ class RmaxLP_Agent:
         cv,v=0,[]
         prior=0.04
         sum_count=sum(nSAS_SA.values())
-        sum_prior=sum_count + 25*prior
+        sum_prior=sum_count + len(self.environment.states)*prior
         """if sum_count==1:
             return np.log(prior/sum_prior)"""
         for next_state,next_state_count in nSAS_SA.items():

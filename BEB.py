@@ -98,7 +98,7 @@ class BEB_Agent:
                     self.prior_0[state_1][action]=sum(prior_coeff_transitions.values())
                 else : 
                     for state_2 in self.states : 
-                        self.prior[state_1][action][state_2]=self.prior[state_1][action][state_2]=self.coeff_prior
+                        self.prior[state_1][action][state_2]=self.coeff_prior
                         self.prior_0[state_1][action]=len(self.states)*self.coeff_prior
                 self.bonus[state_1][action]=self.beta
                 self.Q[state_1][action]=(1+self.beta)/(1-self.gamma)

@@ -22,22 +22,23 @@ class Uncertain_State_U:
         self.transitions_U=transitions_U
         
         initial_state=[]
-        final_state=[]
+        reward_state=[]
         wall_state=[]
         for row in range(len(world)):
             for col in range(len(world[0])):
                 if world[row,col]==-1:wall_state.append((row,col))
                 if world[row,col]==-2:initial_state.append((row,col))
-                if world[row,col]>0:final_state.append((row,col))
+                if world[row,col]>0:reward_state.append((row,col))
         self.height = len(world)
         self.width = len(world[0])
         self.grid = world       
         self.final_states={}
-        for state in final_state:self.final_states[state[0],state[1],STAY]=world[state]
-        self.values= np.array(create_matrix(self.width, self.height,[-0.01,-0.01,-0.01,-0.01,-0.01]))  
+        self.reward_states={}
+        for state in reward_state:self.reward_states[state[0],state[1],STAY]=world[state]
+        self.values= np.array(create_matrix(self.width, self.height,[0.,0.,0.,0.,0.]))  
         self.current_location = initial_state[0]
         self.first_location=initial_state[0]
-        for transition, reward in self.final_states.items():
+        for transition, reward in self.reward_states.items():
             self.values[transition[0],transition[1],STAY]=reward
         self.walls=wall_state
         self.actions = [UP, DOWN, LEFT, RIGHT,STAY]
@@ -65,7 +66,7 @@ class Uncertain_State_U:
         
     def make_step(self, action):
         self.number_steps+=1
-        if self.number_steps>500 and not self.changed and self.current_location==self.first_location :
+        if self.number_steps==1200 :
             number_steps=self.number_steps
             self.__init__(self.world,self.transitions_U,self.transitions)
             self.changed=True
