@@ -64,6 +64,9 @@ class Uncertain_State_B:
         self.number_steps=0
         self.changed=False
         self.uncertain_states=[]
+        
+        self.timescale=40
+        
     def make_step(self, action):
         self.number_steps+=1
         if self.number_steps==1200:

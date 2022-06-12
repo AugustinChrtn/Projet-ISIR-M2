@@ -52,6 +52,7 @@ class Lopes_State():
         self.transitions=transitions
         self.uncertain_states=[(0,1),(0,3),(2,1),(2,3)]
         self.entropy={(state,action) : entropy(transitions[action][state]) for state in self.states for action in self.actions }
+        self.timescale=30
         
     def make_step(self, action):
         last_location = self.current_location       

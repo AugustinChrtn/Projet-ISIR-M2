@@ -68,7 +68,7 @@ class Graphique():
         max_value=max(rewards.values())
         number_keys=len(rewards)
         for key,value in rewards.items():
-            if key[2] != STAY:
+            """if key[2] != STAY:
                 position_correction={UP:(15,25),DOWN:(35,25),LEFT:(25,15),RIGHT:(25,35)}
                 y=50*key[0]+position_correction[key[2]][0]
                 x=50*key[1]+position_correction[key[2]][1]
@@ -76,11 +76,12 @@ class Graphique():
                 angle=angles[key[2]]
                 if value==max_value : self.DrawArrow(x, y,self.GREEN,angle)
                 else : self.DrawArrow(x, y,self.PURPLE,angle)
-                """text_corrections={UP:(18,8),DOWN:(-35,8),LEFT:(20,0),RIGHT:(20,0)}
+                text_corrections={UP:(18,8),DOWN:(-35,8),LEFT:(20,0),RIGHT:(20,0)}
                 label=self.font.render('+'+str(value),1,self.BLACK)
                 x=50*key[0]+text_corrections[key[2]][0]
                 y=50*key[1]+text_corrections[key[2]][1]
-                self.screen.blit(label, (y,x))"""
+                self.screen.blit(label, (y,x))
+            """
             if key[2]==STAY and number_keys<5:
                 x=50*(key[1])+27.5
                 y=50*(key[0])+27.5

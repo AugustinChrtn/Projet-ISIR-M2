@@ -31,11 +31,13 @@ class Lopes_nostat():
         
         self.actions = [UP, DOWN, LEFT, RIGHT,STAY]
         malus=-0.1
-        self.rewards={(1,1,UP):malus,(1,1,LEFT):malus,(1,1,RIGHT):malus,(1,1,DOWN):malus,(1,1,STAY):malus,(2,4,STAY):1,
+        bonus=1
+        self.rewards={(1,1,UP):malus,(1,1,LEFT):malus,(1,1,RIGHT):malus,(1,1,DOWN):malus,(1,1,STAY):malus,
                       (1,2,UP):malus,(1,2,LEFT):malus,(1,2,RIGHT):malus,(1,2,DOWN):malus,(1,2,STAY):malus,
                       (1,3,UP):malus,(1,3,LEFT):malus,(1,3,RIGHT):malus,(1,3,DOWN):malus,(1,3,STAY):malus,
-                      (2,2,UP):malus,(2,2,LEFT):malus,(2,2,RIGHT):malus,(2,2,DOWN):malus,(2,2,STAY):malus}
-        
+                      (2,2,UP):malus,(2,2,LEFT):malus,(2,2,RIGHT):malus,(2,2,DOWN):malus,(2,2,STAY):malus,
+                      (2,4,UP):bonus,(2,4,LEFT):bonus,(2,4,RIGHT):bonus,(2,4,DOWN):bonus,(2,4,STAY):bonus}
+
         for transition, reward in self.rewards.items():
             self.values[transition[0],transition[1],transition[2]]=reward
 
@@ -55,7 +57,8 @@ class Lopes_nostat():
         self.changed=False
         
         self.entropy={(state,action) : entropy(transitions[action][state]) for state in self.states for action in self.actions }
-    
+        self.timescale=30
+        
     def make_step(self, action):
         self.number_steps+=1
         if self.number_steps==900:

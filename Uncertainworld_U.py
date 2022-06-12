@@ -63,6 +63,7 @@ class Uncertain_State_U:
         self.number_steps=0
         self.changed=False
         self.uncertain_states=[]
+        self.timescale=40
         
     def make_step(self, action):
         self.number_steps+=1

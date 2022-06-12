@@ -32,6 +32,7 @@ class RmaxLP_Agent:
         #self.known_state_action=[]
         self.ajout_states()
         self.last_model_update=0
+        
     def learn(self,old_state,reward,new_state,action):
                     
                     
@@ -80,14 +81,16 @@ class RmaxLP_Agent:
                         old_CV,old_variance=self.cross_validation(new_dict)
                         self.LP[old_state][action]=max(old_CV-new_CV+self.alpha*np.sqrt(new_variance),0.001)
                         
-                        if old_state==(0,0) and action==1:
-                            """print(old_CV,new_CV,new_variance)
-                            print(self.LP[old_state][action])
-                            print("")"""
-                    for i in range(10):
-                            for visited_state in self.nSA:
-                                for taken_action in self.nSA[visited_state]:
-                                    self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action]])
+
+                    delta=1
+                    while delta > 1e-3 :
+                        delta=0
+                        for visited_state in self.nSA:
+                            for taken_action in self.nSA[visited_state]:
+                                value_action=self.Q[visited_state][taken_action]
+                                self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action]])
+                                delta=max(delta,np.abs(value_action-self.Q[visited_state][taken_action]))       
+                            
                                 
     def choose_action(self):
         self.step_counter+=1

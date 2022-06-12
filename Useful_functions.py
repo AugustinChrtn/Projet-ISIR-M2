@@ -28,6 +28,9 @@ from BEB import BEB_Agent
 from BEBLP2 import BEBLP_Agent
 from RmaxLP import RmaxLP_Agent
 from greedyMB import QMB_Agent
+from PEI_E import PEI_E_Agent
+from PIM import PIM_Agent
+
 from Representation import Graphique
 
 
@@ -77,12 +80,14 @@ for number_world in range(1,21):
     transitions_B=np.load('Mondes/Transitions_'+str(number_world)+'_B.npy',allow_pickle=True)
     transitions_lopes=np.load('Mondes/Transitions_Lopes_non_stat'+str(number_world)+'.npy',allow_pickle=True)
     transitions_lopes_i_variable=np.load('Mondes/Transitions_Lopes_'+str(number_world)+'.npy',allow_pickle=True)
+    transitions_lopes_optimal=np.load('Mondes/Transitions_Lopes_non_stat_optimal'+str(number_world)+'.npy',allow_pickle=True)
     environments_parameters["D_{0}".format(number_world)] = {'world':world}
     environments_parameters["U_{0}".format(number_world)] = {'world':world,'transitions':transitions}
     environments_parameters["DB_{0}".format(number_world)] = {'world':world,'world2':world_2}
     environments_parameters["UU_{0}".format(number_world)] = {'world':world,'transitions':transitions,'transitions_U':transitions_U}
     environments_parameters["UB_{0}".format(number_world)] = {'world':world,'world2':world_2,'transitions':transitions,'transitions_B':transitions_B} 
-    environments_parameters["Lopes_nostat_{0}".format(number_world)]={'transitions':np.load('Mondes/Transitions_Lopes.npy',allow_pickle=True),'transitions2':transitions_lopes}
+    environments_parameters["Lopes_nostat_{0}".format(number_world)]={'transitions':transitions_lopes_i_variable,'transitions2':transitions_lopes}
+    environments_parameters["Lopes_nostat_optimal_{0}".format(number_world)]={'transitions':transitions_lopes_i_variable,'transitions2':transitions_lopes_optimal}
     environments_parameters["Lopes_{0}".format(number_world)]={'transitions':transitions_lopes_i_variable}
     all_environments["D_{0}".format(number_world)]=Deterministic_State
     all_environments["U_{0}".format(number_world)]=Uncertain_State
@@ -90,9 +95,8 @@ for number_world in range(1,21):
     all_environments["UB_{0}".format(number_world)]=Uncertain_State_B
     all_environments["UU_{0}".format(number_world)]=Uncertain_State_U
     all_environments["Lopes_nostat_{0}".format(number_world)]=Lopes_nostat
+    all_environments["Lopes_nostat_optimal_{0}".format(number_world)]=Lopes_nostat
     all_environments["Lopes_{0}".format(number_world)]=Lopes_State
-
-
 
 ### PICTURES ###
 
@@ -354,7 +358,8 @@ def compute_optimal_policies(environments_parameters=environments_parameters):
             transitions_lopes=np.load('Mondes/Transitions_Lopes_non_stat'+str(number_world)+'.npy',allow_pickle=True)
             environments_parameters["DB_{0}".format(number_world)] = {'world':world_2,'world2':world}
             environments_parameters["UU_{0}".format(number_world)] = {'world':world,'transitions':transitions_U,'transitions_U':transitions}
-            environments_parameters["UB_{0}".format(number_world)] = {'world':world_2,'world2':world,'transitions':transitions_B,'transitions_B':transitions} 
+            environments_parameters["UB_{0}".format(number_world)] = {'world':world_2,'world2':world,'transitions':transitions_B,'transitions_B':transitions_lopes_i_variable} 
+            environments_parameters["Lopes_nostat_optimal_{0}".format(number_world)]={'transitions':transitions_lopes_optimal,'transitions2':transitions_lopes_i_variable}
             environments_parameters["Lopes_nostat_{0}".format(number_world)]={'transitions':transitions_lopes,'transitions2':transitions}
         if type(environment).__name__ !='Two_step':
             gridworld=plot_VI(environment,gamma=0.95,accuracy=0.001)
@@ -475,27 +480,67 @@ def fitting_RA(environment_names,u_ms,ms,trials = 200,max_step = 30,accuracy=.05
     convergence_step={(m,u_m):pas_VI*(convergence_trial[m,u_m]+1) for m in ms for u_m in u_ms} 
     return mean_pol_error,convergence_step
 
+def fitting_EGE(environment_names,gamma_es,coeff_es,trials = 100,max_step = 30,accuracy=.05,screen=0,pas_VI=50):
+    EGE_parameters={(gamma_e,coeff_e):{'gamma':0.95,'gamma_e':gamma_e,'coeff_e':coeff_e,'epsilon':0.1} for gamma_e in gamma_es for coeff_e in coeff_es}
+    pol_error={(gamma_e,coeff_e): [] for gamma_e in gamma_es for coeff_e in coeff_es}
+    for name_environment in environment_names:   
+        print(name_environment)
+        environment=all_environments[name_environment](**environments_parameters[name_environment])                
+        for gamma_e in gamma_es :
+            print(gamma_e)
+            for coeff_e in coeff_es :
+                EGE=EGE_Agent(environment,**EGE_parameters[(gamma_e,coeff_e)]) #Defining a new agent from the dictionary agents
+                
+                _,_,policy_value_error= play(environment,EGE,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+
+                pol_error[gamma_e,coeff_e].append(policy_value_error)
+    min_length_param={(gamma_e,coeff_e):np.min([len(pol_error[gamma_e,coeff_e][i]) for i in range(len(environment_names))]) for gamma_e in gamma_es for coeff_e in coeff_es}
+    mean_pol_error={(gamma_e,coeff_e): np.average([pol_error[gamma_e,coeff_e][i][:min_length_param[gamma_e,coeff_e]] for i in range(len(environment_names))],axis=0) for gamma_e in gamma_es for coeff_e in coeff_es}
+    convergence_trial={(gamma_e,coeff_e):np.where(mean_pol_error[gamma_e,coeff_e]<precision_conv)[-1][-1] for gamma_e in gamma_es for coeff_e in coeff_es}
+    convergence_step={(gamma_e,coeff_e):pas_VI*(convergence_trial[gamma_e,coeff_e]+1) for gamma_e in gamma_es for coeff_e in coeff_es} 
+    return mean_pol_error,convergence_step
+
+def fitting_PIM(environment_names,alphas,betas, trials = 100,max_step = 30,accuracy=.01,screen=0,pas_VI=50):
+    PIM_parameters={(alpha,beta):{'gamma':0.95,'alpha':alpha,'beta':beta,'k':2} for alpha in alphas for beta in betas}
+    pol_error={(alpha,beta): [] for alpha in alphas for beta in betas}
+    for name_environment in environment_names:   
+        print(name_environment)
+        environment=all_environments[name_environment](**environments_parameters[name_environment])                
+        for alpha in alphas :
+            print(alpha)
+            for beta in betas :
+                PIM=PIM_Agent(environment,**PIM_parameters[(alpha,beta)]) #Defining a new agent from the dictionary agents
+                
+                _,_,policy_value_error= play(environment,PIM,trials=trials,max_step=max_step,screen=screen,accuracy=accuracy,pas_VI=pas_VI) #Playing in environment
+
+                pol_error[alpha,beta].append(policy_value_error)
+    min_length_param={(alpha,beta):np.min([len(pol_error[alpha,beta][i]) for i in range(len(environment_names))]) for alpha in alphas for beta in betas}
+    mean_pol_error={(alpha,beta): np.average([pol_error[alpha,beta][i][:min_length_param[alpha,beta]] for i in range(len(environment_names))],axis=0) for alpha in alphas for beta in betas}
+    convergence_trial={(alpha,beta):np.where(mean_pol_error[alpha,beta]<precision_conv)[-1][-1] for alpha in alphas for beta in betas}
+    convergence_step={(alpha,beta):pas_VI*(convergence_trial[alpha,beta]+1) for alpha in alphas for beta in betas} 
+    return mean_pol_error,convergence_step
+
+
 
 
 pas_VI=50
 accuracy=0.01
-trials=100
-max_step=40
+trials=84
+max_step=30
 
 
-environment_names=['U_1']
+environment_names=['Lopes_{0}'.format(num) for num in range(1,6)]
 
 temps=str(time.time())
 colors_6=['tab:blue','tab:orange','tab:green','tab:red','tab:purple','tab:brown']
-markers=['^','o','x','*','s','P']
+markers=['^','o','x','*','s','P','.','D','1','v',',']
 
 #E-GREEDY 
 
 """
-
 epsilons=[0.005,0.1,0.2,0.5,0.8,1]
 a,conv_a=fitting_QMB(environment_names,epsilons,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
-np.save('Parameter fitting/e-greedy'+temps,a)
+np.save('Parameter fitting 2/e-greedy'+temps,a)
 plt.figure(dpi=300)
 count=0
 for epsilon,mean_pol in a.items() : 
@@ -506,16 +551,17 @@ plt.xlabel("Steps")
 plt.ylabel("Policy value error")
 plt.grid(linestyle='--')
 plt.legend()
-plt.savefig('Parameter fitting/e-greedy'+temps+environment_names[0]+'.png')
+plt.savefig('Parameter fitting 2/e-greedy'+temps+environment_names[0]+'.png')
 plt.show()
 
 
 #BEB NO PRIOR
 
+
 betas=[0.5,1,2,3,4,5]
 priors=[0.001]
 b,conv_b=fitting_BEB(environment_names,betas=betas,priors=priors,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step,informative=False)
-np.save('Parameter fitting/BEB'+temps,b)
+np.save('Parameter fitting 2/BEB no prior'+temps,b)
 plt.figure(dpi=300)
 count=0
 for (beta,prior),mean_pol in b.items() : 
@@ -526,24 +572,35 @@ plt.xlabel("Steps")
 plt.ylabel("Policy value error")
 plt.grid(linestyle='--')
 plt.legend()
-plt.savefig('Parameter fitting/BEB'+temps+'.png')
+plt.savefig('Parameter fitting 2/BEB no prior'+temps+'.png')
 plt.show()
-
 
 #BEB PRIOR
 
-betas=[round(0.5*i,1) for i in range(1,9)]
-priors=[round(0.1*i,1) for i in range(1,5)]
+betas=[round(0.5*i,1) for i in range(1,11)]
+priors=[round(0.5*i,1) for i in range(1,6)]
 b,conv_b=fitting_BEB(environment_names,betas=betas,priors=priors,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
-np.save('Parameter fitting/BEB'+temps,b)
-plt.figure()
-for (beta,prior),mean_pol in b.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='beta='+str(beta)+', prior='+str(prior))
-plt.title('BEB')
-plt.grid(linestyle='--')
-plt.legend()
-plt.savefig('Parameter fitting/BEB'+temps+'.png')
-plt.show()
+np.save('Parameter fitting 2/BEB'+temps,b)
+
+
+
+markers_beta=markers[:len(betas)]
+new_dict_BEB={prior:{} for prior in priors}
+for (beta,prior), mean_pol in b.items():
+    new_dict_BEB[prior][beta]=mean_pol
+
+for prior in new_dict_BEB:
+    plt.figure(dpi=300)
+    count=0
+    for beta,mean_pol in new_dict_BEB[prior].items():
+        plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='beta='+str(beta),marker=markers_beta[count])
+        count+=1
+    plt.title('BEB, prior='+str(prior))
+    plt.grid(linestyle='--')
+    plt.legend()
+    plt.savefig('Parameter fitting 2/BEB'+str(prior)+environment_names[0]+temps+'.png')
+    plt.show()
+
 
 ser = pd.Series(list(conv_b.values()),
                   index=pd.MultiIndex.from_tuples(conv_b.keys()))
@@ -554,14 +611,48 @@ ax=sns.heatmap(df,cmap='Blues')
 plt.xlabel('Priors')
 plt.ylabel('Betas')
 plt.title('Pas de convergence BEB')
-plt.savefig('Parameter fitting/BEB_heatmap'+temps+environment_names[0]+'.png')
+plt.savefig('Parameter fitting 2/BEB_heatmap'+temps+environment_names[0]+'.png')
 plt.show()
 
 #RALP
-alphas=[0.5]
-ms=[round(0.8*i,1) for i in range(1,7)]
+
+alphas=[round(0.5*i,1) for i in range(1,6)]
+ms=[round(0.5*i,1) for i in range(1,10)]
 c,conv_c=fitting_RALP(environment_names,alphas=alphas,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
-np.save('Parameter fitting/RALP'+temps,c)
+np.save('Parameter fitting 2/RALP'+temps,c)
+
+
+markers_m=markers[:len(ms)]
+new_dict_RALP={alpha:{} for alpha in alphas}
+for (alpha,m), mean_pol in c.items():
+    new_dict_RALP[alpha][m]=mean_pol
+
+
+
+for alpha in new_dict_RALP:
+    plt.figure(dpi=300)
+    count=0
+    for m,mean_pol in new_dict_RALP[alpha].items():
+        plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='m='+str(m),marker=markers_m[count])
+        count+=1
+    plt.title('RALP, alpha='+str(alpha))
+    plt.grid(linestyle='--')
+    plt.legend()
+    plt.savefig('Parameter fitting 2/RALP'+str(alpha)+environment_names[0]+temps+'.png')
+    plt.show()
+
+
+ser = pd.Series(list(conv_c.values()),
+                  index=pd.MultiIndex.from_tuples(conv_c.keys()))
+df = ser.unstack().fillna(0)
+df.shape
+plt.figure()
+ax=sns.heatmap(df,cmap='Blues')
+plt.xlabel('m')
+plt.ylabel('alpha')
+plt.title('Pas de convergence RmaxLP')
+plt.savefig('Parameter fitting 2/RALP_heatmap'+environment_names[0]+temps+'.png')
+plt.show()
 
 
 plt.figure(dpi=300)
@@ -575,37 +666,48 @@ plt.ylabel("Policy value error")
 plt.grid(linestyle='--')
 plt.legend()
 plt.savefig('Parameter fitting/RmaxLP'+temps+'.png')
-plt.show()
+plt.show()"""
+"""
+#BEBLP
+
+alphas=[round(0.5*i,1) for i in range(1,6)]
+betas=[round(0.5*i,1) for i in range(1,11)]
+
+d,conv_d=fitting_BEBLP(environment_names,alphas=alphas,betas=betas,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+np.save('Parameter fitting 2/BEBLP'+temps,d)
+
+
+markers_beta=markers[:len(betas)]
+new_dict_BEBLP={alpha:{} for alpha in alphas}
+for (beta,alpha), mean_pol in d.items():
+    new_dict_BEBLP[alpha][beta]=mean_pol
 
 
 
-plt.figure()
-for (alpha,m),mean_pol in c.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='alpha='+str(alpha)+', m='+str(m))
-plt.title('RmaxLP')
-plt.grid(linestyle='--')
-plt.legend()
-plt.savefig('Parameter fitting/RmaxLP'+temps+'.png')
-plt.show()
+for alpha in new_dict_BEBLP:
+    plt.figure(dpi=300)
+    count=0
+    for beta,mean_pol in new_dict_BEBLP[alpha].items():
+        plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='beta='+str(beta),marker=markers_beta[count])
+        count+=1
+    plt.title('BEBLP, alpha='+str(alpha))
+    plt.grid(linestyle='--')
+    plt.legend()
+    plt.savefig('Parameter fitting 2/BEBLP'+str(alpha)+environment_names[0]+temps+'.png')
+    plt.show()
 
-ser = pd.Series(list(conv_c.values()),
-                  index=pd.MultiIndex.from_tuples(conv_c.keys()))
+
+ser = pd.Series(list(conv_d.values()),
+                  index=pd.MultiIndex.from_tuples(conv_d.keys()))
 df = ser.unstack().fillna(0)
 df.shape
 plt.figure()
 ax=sns.heatmap(df,cmap='Blues')
-plt.xlabel('m')
-plt.ylabel('alpha')
-plt.title('Pas de convergence RmaxLP')
-plt.savefig('Parameter fitting/RALP_heatmap'+environment_names[0]+temps+'.png')
+plt.xlabel('Alpha')
+plt.ylabel('Beta')
+plt.title('Pas de convergence BEBLP')
+plt.savefig('Parameter fitting 2/BEBLP_heatmap'+environment_names[0]+temps+'.png')
 plt.show()
-
-#BEBLP
-
-alphas=[0.5]
-betas=[round(0.5*i,1) for i in range(1,7)]
-d,conv_d=fitting_BEBLP(environment_names,alphas=alphas,betas=betas,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
-np.save('Parameter fitting/BEBLP'+temps,d)
 
 
 plt.figure(dpi=300)
@@ -620,34 +722,43 @@ plt.grid(linestyle='--')
 plt.legend()
 plt.savefig('Parameter fitting/BEBLP'+temps+'.png')
 plt.show()
+"""
+#Rmax
+"""
+ms=[i for i in range(1,11)]
+u_ms=[i for i in range(1,30,3)]
+markers_m=markers[:len(ms)]
+e,conv_e=fitting_RA(environment_names,u_ms=u_ms,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+np.save('Parameter fitting 2/Rmax'+temps,e)
 
-plt.figure(dpi=300)
-for (beta,alpha),mean_pol in d.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='alpha='+str(alpha)+', beta='+str(beta))
-plt.title('BEBLP')
-plt.grid(linestyle='--')
-plt.legend()
-plt.savefig('Parameter fitting/BEBLP'+environment_names[0]+temps+'.png')
-plt.show()
+new_dict={u_m:{} for u_m in u_ms}
+for (m,u_m), mean_p in e.items():
+    new_dict[u_m][m]=mean_p
 
-ser = pd.Series(list(conv_d.values()),
-                  index=pd.MultiIndex.from_tuples(conv_d.keys()))
+for u_m in new_dict:
+    plt.figure(dpi=300)
+    count=0
+    for m,mean_pol in new_dict[u_m].items():
+        plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='m='+str(m),marker=markers_m[count])
+        count+=1
+    plt.title('Rmax, u_m='+str(u_m))
+    plt.grid(linestyle='--')
+    plt.legend()
+    plt.savefig('Parameter fitting 2/Rmax'+str(u_m)+environment_names[0]+temps+'.png')
+    plt.show()
+
+ser = pd.Series(list(conv_e.values()),
+                  index=pd.MultiIndex.from_tuples(conv_e.keys()))
 df = ser.unstack().fillna(0)
 df.shape
 plt.figure()
 ax=sns.heatmap(df,cmap='Blues')
-plt.xlabel('Alpha')
-plt.ylabel('Beta')
-plt.title('Pas de convergence BEBLP')
-plt.savefig('Parameter fitting/BEBLP_heatmap'+environment_names[0]+temps+'.png')
+plt.xlabel('u_m')
+plt.ylabel('m')
+plt.title('Pas de convergence Rmax')
+plt.savefig('Parameter fitting 2/Rmax_heatmap'+environment_names[0]+temps+'.png')
 plt.show()
 
-#Rmax
-
-ms=[i for i in range(1,7)]
-u_ms=[0]
-e,conv_e=fitting_RA(environment_names,u_ms=u_ms,ms=ms,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
-np.save('Parameter fitting/RA'+temps,e)
 
 
 plt.figure(dpi=300)
@@ -662,30 +773,73 @@ plt.grid(linestyle='--')
 plt.legend()
 plt.savefig('Parameter fitting/Rmax'+temps+'.png')
 plt.show()
+"""
 
+"""
+gamma_es=[0.1*i for i in range(6)]
+coeff_es=[1*i for i in range(6)]
+f,conv_f=fitting_EGE(environment_names,gamma_es=gamma_es,coeff_es=coeff_es,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+np.save('Parameter fitting/EGE'+temps,f)
 
 plt.figure(dpi=300)
-for (m,u_m),mean_pol in e.items() : 
-    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='m='+str(m)+', u_m='+str(u_m))
-plt.title('Rmax')
+for (gamma_e,coeff_e),mean_pol in f.items() : 
+    plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='gamma_e='+str(gamma_e)+', coeff_e='+str(coeff_e))
+plt.title('EGE')
 plt.grid(linestyle='--')
 plt.legend()
-plt.savefig('Parameter fitting/Rmax'+environment_names[0]+temps+'.png')
+plt.savefig('Parameter fitting/EGE'+environment_names[0]+temps+'.png')
 plt.show()
 
-ser = pd.Series(list(conv_e.values()),
-                  index=pd.MultiIndex.from_tuples(conv_e.keys()))
+ser = pd.Series(list(conv_f.values()),
+                  index=pd.MultiIndex.from_tuples(conv_f.keys()))
 df = ser.unstack().fillna(0)
 df.shape
 plt.figure()
 ax=sns.heatmap(df,cmap='Blues')
-plt.xlabel('u_m')
-plt.ylabel('m')
-plt.title('Pas de convergence Rmax')
-plt.savefig('Parameter fitting/Rmax_heatmap'+environment_names[0]+temps+'.png')
+plt.xlabel('gamma_e')
+plt.ylabel('coeff_e')
+plt.title('Pas de convergence ε-greedy-E')
+plt.savefig('Parameter fitting/EGE_heatmap'+environment_names[0]+temps+'.png')
+plt.show()
+
+# PIM    
+    
+
+alphas=[10**(i) for i in range(-3,4)]
+betas=[10**(i) for i in range(-3,4)]
+g,conv_g=fitting_PIM(environment_names,alphas=alphas,betas=betas,pas_VI=pas_VI,accuracy=accuracy,trials=trials,max_step=max_step)
+np.save('Parameter fitting 2/PIM'+temps,g)
+
+
+new_dict_PIM={alpha:{} for alpha in alphas}
+for (alpha,beta), mean_p in g.items():
+    new_dict_PIM[alpha][beta]=mean_p
+
+
+for alpha in new_dict_PIM:
+    plt.figure(dpi=300)
+    count=0
+    for beta,mean_pol in new_dict_PIM[alpha].items():
+        plt.plot([pas_VI*i for i in range(len(mean_pol))],mean_pol,label='beta='+str(beta),marker=markers[count])
+        count+=1
+    plt.title('PIM, alpha='+str(alpha))
+    plt.grid(linestyle='--')
+    plt.legend()
+    plt.savefig('Parameter fitting 2/PIM'+str(alpha)+environment_names[0]+temps+'.png')
+    plt.show()
+
+
+ser = pd.Series(list(conv_g.values()),
+                  index=pd.MultiIndex.from_tuples(conv_g.keys()))
+df = ser.unstack().fillna(0)
+df.shape
+plt.figure()
+ax=sns.heatmap(df,cmap='Blues')
+plt.xlabel('beta')
+plt.ylabel('alpha')
+plt.title('Pas de convergence PIM')
+plt.savefig('Parameter fitting 2/PIM_heatmap'+environment_names[0]+temps+'.png')
 plt.show()
 """
-###Plotting parameter fitting from saved data ####
-
 
 

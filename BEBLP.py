@@ -55,7 +55,7 @@ class BEBLP_Agent:
         #Modifier les probabilités de transition selon le prior avec distribution de dirichlet
         self.tSAS[old_state][action]=count_to_dirichlet(self.prior[old_state][action])
         self.last_k[old_state][action][self.nSA[old_state][action]%self.step_update]=new_state
-        #Ajout du bonus qui dépend du nombre de passages
+
 
         """if self.nSA[old_state][action]<self.step_update:
             new_CV,new_variance=self.cross_validation(self.nSAS[old_state][action],self.prior[old_state][action])
@@ -79,10 +79,15 @@ class BEBLP_Agent:
                 print(self.LP[old_state][action],self.bonus[old_state][action])
                 print("")
             """
-        for i in range(10):
-            for state_known in self.nSAS:
-                for action_known in self.nSAS[state_known]:
-                    self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+        
+            delta=1
+            while delta > 1e-3 :
+                delta=0
+                for visited_state in self.nSA:
+                    for taken_action in self.nSA[visited_state]:
+                        value_action=self.Q[visited_state][taken_action]
+                        self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.bonus[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action]])
+                        delta=max(delta,np.abs(value_action-self.Q[visited_state][taken_action]))     
 
     def choose_action(self): #argmax pour choisir l'action
         self.step_counter+=1

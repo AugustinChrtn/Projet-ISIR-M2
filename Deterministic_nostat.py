@@ -34,11 +34,12 @@ class Deterministic_no_stat:
         self.width = len(world[0])
         self.grid = world       
         self.final_states={}
-        for state in final_state:self.final_states[state[0],state[1],STAY]=world[state]
+        self.reward_states={}
+        for state in final_state:self.reward_states[state[0],state[1],STAY]=world[state]
         self.values= np.array(create_matrix(self.width, self.height,[-0.01,-0.01,-0.01,-0.01,-0.01]))  
         self.current_location = initial_state[0]    
         self.first_location=initial_state[0]
-        for transition, reward in self.final_states.items():
+        for transition, reward in self.reward_states.items():
             self.values[transition[0],transition[1],STAY]=reward
         self.walls=wall_state
 

@@ -60,10 +60,14 @@ class BEB_Agent:
         self.bonus[old_state][action]=self.beta/(1+self.prior_0[old_state][action])
                   
 
-        for i in range(10):
-            for state_known in self.nSA:
-                    for action_known in self.nSA[state_known]:
-                        self.Q[state_known][action_known]=self.R[state_known][action_known]+self.bonus[state_known][action_known]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[state_known][action_known][next_state] for next_state in self.tSAS[state_known][action_known].keys()])
+        delta=1
+        while delta > 1e-3 :
+            delta=0
+            for visited_state in self.nSA:
+                for taken_action in self.nSA[visited_state]:
+                    value_action=self.Q[visited_state][taken_action]
+                    self.Q[visited_state][taken_action]=self.R[visited_state][taken_action]+self.bonus[visited_state][taken_action]+self.gamma*np.sum([max(self.Q[next_state].values())*self.tSAS[visited_state][taken_action][next_state] for next_state in self.tSAS[visited_state][taken_action]])
+                    delta=max(delta,np.abs(value_action-self.Q[visited_state][taken_action]))   
                 
                     
     def choose_action(self): #argmax pour choisir l'action

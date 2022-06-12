@@ -55,6 +55,7 @@ class Uncertain_State:
             for j in range(self.width):
                 if (i,j) not in self.walls:
                     self.states.append((i,j))
+        self.timescale=40
         
     def make_step(self, action):
         last_location = self.current_location
